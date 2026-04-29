@@ -2,7 +2,7 @@
   import { onMount, getContext } from "svelte";
   import { page } from "$app/stores";
   import * as api from "$lib/api";
-  import { loadCliInfo, KeybindingStore } from "$lib/stores";
+  import { loadCliInfo, KeybindingStore, loadCliVersionInfo, getCliVersionInfo_cached, updateInstalledVersion } from "$lib/stores";
   import type {
     UserSettings,
     CliConfigSettingDef,
@@ -266,6 +266,16 @@
   let rustCmdCopied = $state(false);
   let currentUsername = $state("");
 
+  // ── CLI Version state ──
+  let cliVersionInfo = $derived(getCliVersionInfo_cached());
+  let cliUpgrading = $state(false);
+  let cliUpgradeResult = $state<import("$lib/types").CliUpgradeResult | null>(null);
+  let cliHasUpdate = $derived(
+    cliVersionInfo?.installed && cliVersionInfo?.latest
+      ? cliVersionInfo.installed !== cliVersionInfo.latest
+      : false,
+  );
+
   // ── Remote host state ──
   let remoteHosts = $state<RemoteHost[]>([]);
   let editingRemote = $state<RemoteHost | null>(null);
@@ -277,6 +287,7 @@
   let remoteFormRemoteCwd = $state("");
   let remoteFormClaudePath = $state("");
   let remoteFormForwardKey = $state(false);
+  let remoteFormPassword = $state("");
   let remoteTesting = $state(false);
   let remoteTestResult = $state<RemoteTestResult | null>(null);
   let remoteSaving = $state(false);
@@ -292,6 +303,7 @@
     remoteFormRemoteCwd = "";
     remoteFormClaudePath = "";
     remoteFormForwardKey = false;
+    remoteFormPassword = "";
     remoteTestResult = null;
     remoteFormTouched = false;
   }
@@ -306,6 +318,7 @@
     remoteFormRemoteCwd = host.remote_cwd ?? "";
     remoteFormClaudePath = host.remote_claude_path ?? "";
     remoteFormForwardKey = host.forward_api_key;
+    remoteFormPassword = host.password ?? "";
     remoteTestResult = null;
   }
 
@@ -325,6 +338,7 @@
         remote_cwd: remoteFormRemoteCwd.trim() || undefined,
         remote_claude_path: remoteFormClaudePath.trim() || undefined,
         forward_api_key: remoteFormForwardKey,
+        password: remoteFormPassword.trim() || undefined,
       };
 
       const updated = editingRemote
@@ -377,6 +391,7 @@
         remoteFormPort || undefined,
         remoteFormKeyPath.trim() || undefined,
         remoteFormClaudePath.trim() || undefined,
+        remoteFormPassword.trim() || undefined,
       );
       dbg("settings", "remote test result", remoteTestResult);
       // Auto-save on successful SSH connection (keep form visible for user to review)
@@ -549,7 +564,7 @@
 
   function getConflictWarning(key: string, context: string, excludeCmd: string): string {
     const conflict = keybindingStore.findConflict(key, context, excludeCmd);
-    return conflict ? t("settings_shortcuts_conflictsWith", { label: conflict.label }) : "";
+    return conflict ? t("settings_shortcuts_conflictsWith", { label: conflict.labelKey ? t(conflict.labelKey) : conflict.label }) : "";
   }
 
   // ── CLI Config state ──
@@ -664,8 +679,21 @@
       label: t("settings_cliConfig_responseLangLabel"),
       description: t("settings_cliConfig_responseLangDesc"),
       group: "appearance",
-      type: "string",
+      type: "enum",
       default: undefined,
+      options: [
+        { value: "en", label: "English" },
+        { value: "zh-CN", label: "简体中文" },
+        { value: "zh-TW", label: "繁體中文" },
+        { value: "ja", label: "日本語" },
+        { value: "ko", label: "한국어" },
+        { value: "es", label: "Español" },
+        { value: "fr", label: "Français" },
+        { value: "de", label: "Deutsch" },
+        { value: "pt", label: "Português" },
+        { value: "ru", label: "Русский" },
+        { value: "ar", label: "العربية" },
+      ],
     },
     {
       key: "outputStyle",
@@ -1149,6 +1177,7 @@
         });
     }
     loadCliInfo();
+    loadCliVersionInfo();
     // Auto-detect local proxies
     checkAllLocalProxies();
     if (selectedPlatform?.category === "local") {
@@ -1420,6 +1449,80 @@
             </div>
           </div>
         </Card>
+
+        <!-- CLI Version Card -->
+        {#if cliVersionInfo}
+          <Card class="p-6 space-y-4">
+            <h2 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              {t("settings_cliVersion_title")}
+            </h2>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-muted-foreground">{t("settings_cliVersion_installed")}</span>
+                <span class="text-sm font-mono">{cliVersionInfo.installed ?? "—"}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-muted-foreground">{t("settings_cliVersion_latest")}</span>
+                <span class="text-sm font-mono">{cliVersionInfo.latest ?? "—"}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  {#if cliHasUpdate}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-500">
+                      <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      {t("settings_cliVersion_updateAvailable")}
+                    </span>
+                  {:else}
+                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-500">
+                      <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                      {t("settings_cliVersion_upToDate")}
+                    </span>
+                  {/if}
+                </div>
+                {#if cliHasUpdate}
+                  <Button
+                    size="sm"
+                    variant={cliUpgradeResult?.success ? "outline" : "default"}
+                    disabled={cliUpgrading}
+                    onclick={async () => {
+                      cliUpgrading = true;
+                      cliUpgradeResult = null;
+                      try {
+                        cliUpgradeResult = await api.upgradeCli();
+                        if (cliUpgradeResult.success) {
+                          await loadCliVersionInfo();
+                          if (cliUpgradeResult.newVersion) {
+                            updateInstalledVersion(cliUpgradeResult.newVersion);
+                          }
+                        }
+                      } catch (e: any) {
+                        cliUpgradeResult = {
+                          success: false,
+                          installMethod: "",
+                          commandRun: "",
+                          error: e?.message ?? String(e),
+                        };
+                      } finally {
+                        cliUpgrading = false;
+                      }
+                    }}
+                  >
+                    {#if cliUpgrading}
+                      {t("settings_cliVersion_upgrading")}
+                    {:else if cliUpgradeResult?.success}
+                      {t("settings_cliVersion_success")}
+                    {:else}
+                      {t("settings_cliVersion_upgradeBtn")}
+                    {/if}
+                  </Button>
+                {/if}
+              </div>
+              {#if cliUpgradeResult && !cliUpgradeResult.success && cliUpgradeResult.error}
+                <p class="text-xs text-destructive">{t("settings_cliVersion_failed")}: {cliUpgradeResult.error}</p>
+              {/if}
+            </div>
+          </Card>
+        {/if}
 
         <!-- Web Server Card (desktop only) -->
         {#if getTransport().isDesktop()}
@@ -2691,8 +2794,8 @@
               {t("settings_cliConfig_appearance")}
             </h2>
             {#each appearanceSettings as def (def.key)}
-              <div class="flex items-center justify-between gap-4 py-1">
-                <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 py-1">
+                <div class="min-w-[180px]">
                   <div class="flex items-center gap-2">
                     <p class="text-sm font-medium">{def.label}</p>
                     {#if isProjectOverride(def.key)}
@@ -2731,7 +2834,7 @@
                     ></span>
                   </button>
                 {:else if def.type === "enum" && def.options}
-                  <div class="flex gap-1.5 shrink-0">
+                  <div class="flex flex-wrap gap-1.5">
                     {#each def.options as opt (opt.value)}
                       <button
                         class="rounded-md border px-3 py-1.5 text-xs transition-all duration-150
@@ -2883,7 +2986,7 @@
           <div class="divide-y divide-border/50">
             {#each fixedBindings as binding (binding.command)}
               <div class="flex items-center gap-3 py-1.5">
-                <span class="text-sm text-foreground/60 min-w-[140px]">{binding.label}</span>
+                <span class="text-sm text-foreground/60 min-w-[140px]">{binding.labelKey ? t(binding.labelKey) : binding.label}</span>
                 <span
                   class="inline-flex items-center rounded-md border bg-muted/30 px-2.5 py-1 text-xs font-mono text-muted-foreground min-w-[60px] justify-center"
                 >
@@ -2918,7 +3021,7 @@
             <div class="divide-y divide-border/50">
               {#each cliBindings as binding (binding.command)}
                 <div class="flex items-center gap-3 py-1.5">
-                  <span class="text-sm text-foreground/60 min-w-[140px]">{binding.label}</span>
+                  <span class="text-sm text-foreground/60 min-w-[140px]">{binding.labelKey ? t(binding.labelKey) : binding.label}</span>
                   <span
                     class="inline-flex items-center rounded-md border bg-muted/30 px-2.5 py-1 text-xs font-mono text-muted-foreground min-w-[60px] justify-center"
                   >
@@ -3263,6 +3366,20 @@
                 </div>
               {/if}
             </div>
+            <label class="block">
+              <span class="text-xs text-muted-foreground block mb-1"
+                >{t("settings_remote_password")}</span
+              >
+              <input
+                type="password"
+                bind:value={remoteFormPassword}
+                placeholder={t("settings_remote_passwordPlaceholder")}
+                class="w-full text-sm px-2 py-1.5 rounded border border-input bg-background"
+              />
+              <span class="text-[10px] text-muted-foreground mt-0.5 block"
+                >{t("settings_remote_authHint")}</span
+              >
+            </label>
             <label class="block">
               <span class="text-xs text-muted-foreground block mb-1"
                 >{t("settings_remote_remoteCwd")}</span

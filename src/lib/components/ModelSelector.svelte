@@ -120,7 +120,7 @@
       <div class="p-1">
         {#each models as mdl}
           <button
-            class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent transition-colors {value ===
+            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors {value ===
             mdl.value
               ? 'bg-accent font-medium'
               : ''}"
@@ -148,13 +148,13 @@
         {#if showCustom}
           <div class="flex items-center gap-1 px-2 py-1">
             <input
-              class="flex-1 rounded-sm border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              class="flex-1 rounded-md border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               bind:value={customModel}
               placeholder={t("model_placeholder")}
               onkeydown={(e) => e.key === "Enter" && applyCustom()}
             />
             <button
-              class="rounded-sm bg-primary px-2 py-1 text-xs text-primary-foreground"
+              class="rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground"
               onclick={applyCustom}
             >
               {t("model_set")}
@@ -162,7 +162,7 @@
           </div>
         {:else}
           <button
-            class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm hover:bg-accent transition-colors text-muted-foreground"
+            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent transition-colors text-muted-foreground"
             onclick={() => (showCustom = true)}
           >
             <svg

@@ -1,6 +1,6 @@
 use crate::models::{DailyAggregate, ModelAggregate, RunUsageSummary, UsageOverview};
 use crate::storage;
-use crate::storage::changelog::ChangelogEntry;
+use crate::storage::changelog::ChangelogPayload;
 use std::collections::{BTreeMap, HashMap};
 
 /// Parse a started_at timestamp to a UTC NaiveDate.
@@ -303,9 +303,9 @@ pub fn get_heatmap_daily(scope: String) -> Result<Vec<DailyAggregate>, String> {
 }
 
 #[tauri::command]
-pub async fn get_changelog() -> Result<Vec<ChangelogEntry>, String> {
-    log::debug!("[stats] get_changelog");
-    storage::changelog::get_changelog().await
+pub async fn get_changelog(locale: Option<String>) -> Result<ChangelogPayload, String> {
+    log::debug!("[stats] get_changelog: locale={:?}", locale);
+    storage::changelog::get_changelog(locale).await
 }
 
 #[cfg(test)]

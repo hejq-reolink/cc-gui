@@ -91,10 +91,10 @@
 </script>
 
 <div
-  class="group w-full text-left px-3 py-2 rounded-md transition-colors text-xs cursor-pointer
+  class="group w-full text-left px-3 py-2 rounded-md transition-all duration-150 ease-spring text-xs cursor-pointer
     {selected
-    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-    : 'hover:bg-sidebar-accent/50 text-sidebar-foreground'}"
+    ? 'sidebar-selected text-sidebar-accent-foreground'
+    : 'hover:bg-sidebar-accent/60 hover:translate-x-[1px] text-sidebar-foreground'}"
   role="button"
   tabindex="0"
   onclick={handleClick}

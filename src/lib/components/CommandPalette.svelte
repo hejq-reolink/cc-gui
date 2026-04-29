@@ -3,13 +3,14 @@
   import {
     filterCommands,
     groupByCategory,
-    categoryLabels,
+    categoryLabelKeys,
     type CommandDef,
     type CommandCategory,
   } from "$lib/commands";
   import * as api from "$lib/api";
   import { dbg, dbgWarn } from "$lib/utils/debug";
   import { t } from "$lib/i18n/index.svelte";
+  import { formatKeyDisplay } from "$lib/stores/keybindings.svelte";
 
   let {
     open = $bindable(false),
@@ -34,19 +35,32 @@
   let query = $state("");
   let selectedIndex = $state(0);
   let inputEl: HTMLInputElement | undefined = $state();
+  let closing = $state(false);
+  let visible = $state(false);
 
-  let filtered = $derived(filterCommands(query, agent));
+  let filtered = $derived(filterCommands(query, agent, t));
   let grouped = $derived(groupByCategory(filtered));
   let flatList = $derived(filtered);
 
-  // Reset on open
+  // Reset on open, handle two-phase close
   $effect(() => {
     if (open) {
+      visible = true;
+      closing = false;
       query = "";
       selectedIndex = 0;
       requestAnimationFrame(() => inputEl?.focus());
+    } else if (visible) {
+      closing = true;
     }
   });
+
+  function handlePaletteAnimationEnd() {
+    if (closing) {
+      visible = false;
+      closing = false;
+    }
+  }
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
@@ -116,7 +130,12 @@
           const diff = await api.getGitDiff(cwd, false);
           showResultModal(t("cmd_gitDiff"), diff || t("cmd_noChanges"));
         } catch (e) {
-          showResultModal(t("cmd_error"), String(e));
+          const msg = String(e);
+          if (msg.includes("Not a git repository") || msg.includes("not a git repository")) {
+            showResultModal(t("cmd_error"), t("cmd_notGitRepo"));
+          } else {
+            showResultModal(t("cmd_error"), msg.split("\n").slice(0, 3).join("\n"));
+          }
         }
         break;
 
@@ -125,7 +144,12 @@
           const status = await api.getGitStatus(cwd);
           showResultModal(t("cmd_gitStatus"), status || t("cmd_workingTreeClean"));
         } catch (e) {
-          showResultModal(t("cmd_error"), String(e));
+          const msg = String(e);
+          if (msg.includes("Not a git repository") || msg.includes("not a git repository")) {
+            showResultModal(t("cmd_error"), t("cmd_notGitRepo"));
+          } else {
+            showResultModal(t("cmd_error"), msg.split("\n").slice(0, 3).join("\n"));
+          }
         }
         break;
 
@@ -134,9 +158,9 @@
           try {
             const a = await api.getRunArtifacts(runId);
             const info = [
-              `Cost: ${a.cost_estimate != null ? "$" + a.cost_estimate.toFixed(4) : "N/A"}`,
-              `Files changed: ${a.files_changed.length}`,
-              `Commands: ${a.commands.length}`,
+              `${t("cmd_costLabel")}: ${a.cost_estimate != null ? "$" + a.cost_estimate.toFixed(4) : "N/A"}`,
+              `${t("cmd_filesChangedLabel")}: ${a.files_changed.length}`,
+              `${t("cmd_commandsLabel")}: ${a.commands.length}`,
             ].join("\n");
             showResultModal(t("cmd_runInfo"), info);
           } catch (e) {
@@ -191,8 +215,8 @@
           const claude = await api.checkAgentCli("claude");
           const lines = [
             `Claude: ${claude.found ? t("cmd_cliInstalled") : t("cmd_cliNotFound")}`,
-            claude.path ? `  Path: ${claude.path}` : "",
-            claude.version ? `  Version: ${claude.version}` : "",
+            claude.path ? `  ${t("cmd_pathLabel")}: ${claude.path}` : "",
+            claude.version ? `  ${t("cmd_versionLabel")}: ${claude.version}` : "",
           ]
             .filter(Boolean)
             .join("\n");
@@ -239,7 +263,7 @@
   });
 </script>
 
-{#if open}
+{#if visible}
   <div
     class="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
     role="dialog"
@@ -248,14 +272,15 @@
     <!-- Backdrop -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="fixed inset-0 bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 bg-black/30 backdrop-blur-md {closing ? 'animate-backdrop-out' : 'animate-backdrop-in'}"
       onclick={() => (open = false)}
       onkeydown={() => {}}
     ></div>
 
     <!-- Palette -->
     <div
-      class="relative z-50 w-full max-w-xl rounded-lg border bg-background shadow-2xl animate-fade-in"
+      class="relative z-50 w-full max-w-xl rounded-2xl border bg-background shadow-apple-lg {closing ? 'animate-fade-out' : 'animate-fade-in'}"
+      onanimationend={handlePaletteAnimationEnd}
     >
       <!-- Search -->
       <div class="flex items-center gap-2 border-b px-4 py-3">
@@ -288,24 +313,24 @@
               <p
                 class="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
               >
-                {categoryLabels[cat as CommandCategory]}
+                {t(categoryLabelKeys[cat as CommandCategory])}
               </p>
               {#each grouped[cat as CommandCategory] as cmd}
                 {@const idx = indexMap.get(cmd.id) ?? 0}
                 <button
                   data-cmd-idx={idx}
-                  class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors
+                  class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors
                     {idx === selectedIndex
                     ? 'bg-accent text-accent-foreground'
                     : 'hover:bg-accent/50'}"
                   onclick={() => executeCommand(cmd)}
                   onmouseenter={() => (selectedIndex = idx)}
                 >
-                  <span class="flex-1 text-left">{cmd.name}</span>
-                  <span class="text-xs text-muted-foreground">{cmd.description}</span>
+                  <span class="flex-1 text-left">{cmd.nameKey ? t(cmd.nameKey) : cmd.name}</span>
+                  <span class="text-xs text-muted-foreground">{cmd.descriptionKey ? t(cmd.descriptionKey) : cmd.description}</span>
                   {#if cmd.shortcut}
                     <kbd class="text-[10px] text-muted-foreground bg-muted rounded px-1 py-0.5"
-                      >{cmd.shortcut}</kbd
+                      >{formatKeyDisplay(cmd.shortcut)}</kbd
                     >
                   {/if}
                 </button>
@@ -337,17 +362,17 @@
   >
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="fixed inset-0 bg-black/50 backdrop-blur-sm"
+      class="fixed inset-0 bg-black/30 backdrop-blur-md"
       onclick={() => (resultModalOpen = false)}
       onkeydown={(e) => e.key === "Escape" && (resultModalOpen = false)}
     ></div>
     <div
-      class="relative z-[60] w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg animate-fade-in"
+      class="relative z-[60] w-full max-w-lg rounded-2xl border bg-background p-6 shadow-apple-lg animate-fade-in"
     >
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-semibold">{resultModalTitle}</h2>
         <button
-          class="rounded-md p-1 hover:bg-accent transition-colors"
+          class="rounded-lg p-1 hover:bg-accent transition-colors"
           onclick={() => (resultModalOpen = false)}
         >
           <svg
@@ -360,7 +385,7 @@
         </button>
       </div>
       <pre
-        class="max-h-[50vh] overflow-auto rounded-lg bg-muted/50 p-4 text-xs font-mono leading-relaxed whitespace-pre-wrap">{resultModalContent}</pre>
+        class="max-h-[50vh] overflow-auto rounded-xl bg-muted/50 p-4 text-xs font-mono leading-relaxed whitespace-pre-wrap">{resultModalContent}</pre>
     </div>
   </div>
 {/if}

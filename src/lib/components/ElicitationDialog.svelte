@@ -125,7 +125,7 @@
 
 {#if current}
   <div
-    class="mx-4 mb-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 shadow-lg"
+    class="mx-4 mb-2 rounded-2xl border border-blue-500/30 bg-blue-500/5 p-4 shadow-lg"
     role="dialog"
     aria-label={t("elicitation_title")}
   >

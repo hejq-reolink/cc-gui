@@ -268,7 +268,7 @@
                     >
                   {/if}
                   <button
-                    class="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-accent transition-colors whitespace-nowrap {copyStates[
+                    class="rounded-lg border border-border px-2.5 py-1 text-xs hover:bg-accent transition-colors whitespace-nowrap {copyStates[
                       method.id
                     ] === 'copied'
                       ? 'text-green-600 border-green-500/30'
@@ -306,7 +306,7 @@
         <!-- Action buttons -->
         <div class="flex items-center justify-center gap-3">
           <button
-            class="rounded-md border border-border px-4 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50"
+            class="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent transition-colors disabled:opacity-50"
             disabled={rechecking}
             onclick={recheckCli}
           >
@@ -322,7 +322,7 @@
             {/if}
           </button>
           <button
-            class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
             onclick={() => {
               step = "api_key_setup";
             }}
@@ -416,7 +416,7 @@
         {/if}
 
         <button
-          class="rounded-md border border-border px-4 py-2 text-xs hover:bg-accent transition-colors mt-4"
+          class="rounded-lg border border-border px-4 py-2 text-xs hover:bg-accent transition-colors mt-4"
           onclick={() => {
             step = "auth_choice";
             error = "";
@@ -428,7 +428,7 @@
       <div class="flex flex-col gap-5">
         <div class="flex items-center gap-2">
           <button
-            class="rounded-md p-1 hover:bg-accent transition-colors"
+            class="rounded-lg p-1 hover:bg-accent transition-colors"
             onclick={() => {
               step = "auth_choice";
               selectedPlatform = null;
@@ -502,7 +502,7 @@
                   type="text"
                   bind:value={customBaseUrl}
                   placeholder="https://api.example.com"
-                  class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-ring"
+                  class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:border-ring"
                 />
               </div>
             {/if}
@@ -517,7 +517,7 @@
                   type={showKey ? "text" : "password"}
                   bind:value={apiKey}
                   placeholder={selectedPlatform.key_placeholder}
-                  class="w-full rounded-md border border-border bg-background px-3 py-2 pr-16 text-sm font-mono focus:outline-none focus:border-ring"
+                  class="w-full rounded-lg border border-border bg-background px-3 py-2 pr-16 text-sm font-mono focus:outline-none focus:border-ring"
                 />
                 <button
                   class="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -545,7 +545,7 @@
             {/if}
 
             <button
-              class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
               disabled={saving || (selectedPlatform.id !== "ollama" && !apiKey)}
               onclick={saveApiKey}
             >
@@ -580,7 +580,7 @@
         <h2 class="text-xl font-semibold">{t("setup_allSet")}</h2>
         <p class="text-sm text-muted-foreground">{t("setup_allSetDesc")}</p>
         <button
-          class="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors mt-2"
+          class="rounded-lg bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors mt-2"
           onclick={finishNow}>{t("setup_start")}</button
         >
       </div>

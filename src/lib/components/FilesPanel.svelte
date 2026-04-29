@@ -54,7 +54,7 @@
       {@const canJump = !!entry.toolUseId}
       {#if canJump}
         <button
-          class="w-full text-left px-2.5 py-1 hover:bg-accent/50 rounded-sm transition-colors group"
+          class="w-full text-left px-2.5 py-1 hover:bg-accent/50 rounded-md transition-colors group"
           onclick={() => onScrollToTool?.(entry.toolUseId!)}
           title={t("toolActivity_scrollToTool")}
         >

@@ -32,7 +32,7 @@ import type {
   ConfiguredMcpServer,
   McpRegistrySearchResult,
   ProviderHealth,
-  ChangelogEntry,
+  ChangelogPayload,
   RemoteTestResult,
   SshKeyInfo,
   PromptSearchResult,
@@ -392,6 +392,7 @@ export async function testRemoteHost(
   port?: number,
   keyPath?: string,
   remoteClaudePath?: string,
+  password?: string,
 ): Promise<RemoteTestResult> {
   dbg("api", "testRemoteHost", { host, user, port });
   return invoke<RemoteTestResult>("test_remote_host", {
@@ -400,6 +401,7 @@ export async function testRemoteHost(
     port: port ?? null,
     keyPath: keyPath ?? null,
     remoteClaudePath: remoteClaudePath ?? null,
+    password: password ?? null,
   });
 }
 
@@ -1005,9 +1007,9 @@ export async function checkForUpdates(): Promise<import("./types").UpdateInfo> {
 
 // ── Changelog ──
 
-export async function getChangelog(): Promise<ChangelogEntry[]> {
-  dbg("api", "getChangelog");
-  return invoke<ChangelogEntry[]>("get_changelog");
+export async function getChangelog(locale: string): Promise<ChangelogPayload> {
+  dbg("api", "getChangelog", { locale });
+  return invoke<ChangelogPayload>("get_changelog", { locale });
 }
 
 // ── Onboarding ──
@@ -1040,6 +1042,11 @@ export async function setCliApiKey(key: string): Promise<void> {
 export async function removeCliApiKey(): Promise<void> {
   dbg("api", "removeCliApiKey");
   return invoke<void>("remove_cli_api_key");
+}
+
+export async function upgradeCli(): Promise<import("./types").CliUpgradeResult> {
+  dbg("api", "upgradeCli");
+  return invoke<import("./types").CliUpgradeResult>("upgrade_cli");
 }
 
 // ── Screenshot ──
@@ -1203,4 +1210,31 @@ export async function cancelRalphLoop(
 ): Promise<{ iteration: number; immediate: boolean }> {
   dbg("api", "cancelRalphLoop", { runId });
   return invoke<{ iteration: number; immediate: boolean }>("cancel_ralph_loop", { runId });
+}
+
+// ── PTY Terminal ──
+
+export async function ptySpawn(
+  id: string,
+  cwd: string,
+  cols: number,
+  rows: number,
+): Promise<number> {
+  dbg("api", "ptySpawn", { id, cwd, cols, rows });
+  return invoke<number>("pty_spawn", { id, cwd, cols, rows });
+}
+
+export async function ptyWrite(id: string, data: string): Promise<void> {
+  dbg("api", "ptyWrite", { id });
+  return invoke<void>("pty_write", { id, data });
+}
+
+export async function ptyResize(id: string, cols: number, rows: number): Promise<void> {
+  dbg("api", "ptyResize", { id, cols, rows });
+  return invoke<void>("pty_resize", { id, cols, rows });
+}
+
+export async function ptyClose(id: string): Promise<void> {
+  dbg("api", "ptyClose", { id });
+  return invoke<void>("pty_close", { id });
 }

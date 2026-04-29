@@ -265,7 +265,7 @@
     <div class="flex gap-2 mb-3">
       <input
         bind:value={search}
-        class="flex-1 rounded-md border bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
+        class="flex-1 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
         placeholder={t("permissions_search")}
       />
     </div>
@@ -274,12 +274,12 @@
       <input
         bind:value={addInput}
         onkeydown={handleAddKeydown}
-        class="flex-1 rounded-md border bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
+        class="flex-1 rounded-lg border bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus:border-ring"
         placeholder={t("permissions_addPlaceholder")}
         disabled={saving}
       />
       <button
-        class="shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+        class="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
         onclick={handleAdd}
         disabled={saving || !addInput.trim()}
       >

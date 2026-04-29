@@ -108,6 +108,9 @@
     onBtwSend,
     onRestoreStash,
     onShortcutHelp,
+    remoteHosts = [] as { name: string; user: string; host: string }[],
+    remoteHostName = null as string | null,
+    onRemoteHostChange,
     userHistory = [] as string[],
     runId = "",
   }: {
@@ -151,6 +154,9 @@
     onBtwSend?: (question: string) => void;
     onRestoreStash?: () => void;
     onShortcutHelp?: () => void;
+    remoteHosts?: { name: string; user: string; host: string }[];
+    remoteHostName?: string | null;
+    onRemoteHostChange?: (name: string | null) => void;
     userHistory?: string[];
     runId?: string;
   } = $props();
@@ -286,6 +292,8 @@
   let modeBtnEl: HTMLButtonElement | undefined = $state();
   let modeDropdownEl: HTMLDivElement | undefined = $state();
   let modeDropdownStyle = $state("");
+
+  let remoteDropdownOpen = $state(false);
 
   let currentMode = $derived(
     PERMISSION_MODES.find((m) => m.value === permissionMode) ?? PERMISSION_MODES[0],
@@ -2110,6 +2118,72 @@
           disabled={disabled || running}
           onSelect={handleSkillSelect}
         />
+        {#if remoteHosts.length > 0 && onRemoteHostChange}
+          <div class="relative inline-flex items-center">
+            {#if remoteDropdownOpen}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <div class="fixed inset-0 z-40" onclick={() => (remoteDropdownOpen = false)}></div>
+            {/if}
+            <button
+              class="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium transition-colors {remoteHostName
+                ? 'text-blue-400 hover:text-blue-300'
+                : 'text-muted-foreground hover:text-foreground'} hover:bg-accent border border-transparent hover:border-border"
+              onclick={() => (remoteDropdownOpen = !remoteDropdownOpen)}
+              title={remoteHostName ? remoteHostName : t("chat_local")}
+            >
+              <svg
+                class="h-3 w-3 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <span>{remoteHostName || t("chat_local")}</span>
+              <svg
+                class="h-2.5 w-2.5 opacity-60"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"><path d="m6 9 6 6 6-6" /></svg
+              >
+            </button>
+            {#if remoteDropdownOpen}
+              <div
+                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-md border border-border bg-popover py-1 shadow-md z-50"
+              >
+                <button
+                  class="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs {!remoteHostName
+                    ? 'text-foreground font-medium'
+                    : 'text-foreground/70 hover:bg-accent'} transition-colors"
+                  onclick={() => {
+                    onRemoteHostChange?.(null);
+                    remoteDropdownOpen = false;
+                  }}
+                >
+                  {t("chat_local")}
+                </button>
+                {#each remoteHosts as host (host.name)}
+                  <button
+                    class="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs {remoteHostName === host.name
+                      ? 'text-foreground font-medium'
+                      : 'text-foreground/70 hover:bg-accent'} transition-colors"
+                    onclick={() => {
+                      onRemoteHostChange?.(host.name);
+                      remoteDropdownOpen = false;
+                    }}
+                  >
+                    {host.name} ({host.user}@{host.host})
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        {/if}
         {#if hasStash && onRestoreStash}
           <button
             class="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium bg-violet-500/15 text-violet-400 hover:bg-violet-500/25 transition-colors"
@@ -2316,7 +2390,7 @@
       <div class="p-1">
         {#each PERMISSION_MODES as mode}
           <button
-            class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-xs hover:bg-accent transition-colors
+            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs hover:bg-accent transition-colors
               {permissionMode === mode.value ? 'bg-accent font-medium' : ''}"
             onclick={() => selectMode(mode.value)}
           >

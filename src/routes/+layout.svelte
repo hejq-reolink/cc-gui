@@ -20,6 +20,8 @@
   import Modal from "$lib/components/Modal.svelte";
   import CliSessionBrowser from "$lib/components/CliSessionBrowser.svelte";
   import UpdateBanner from "$lib/components/UpdateBanner.svelte";
+  import SystemTerminalPanel from "$lib/components/SystemTerminalPanel.svelte";
+  import WindowControls from "$lib/components/WindowControls.svelte";
   import type {
     TaskRun,
     UserSettings,
@@ -69,6 +71,45 @@
   }
 
   let commandPaletteOpen = $state(false);
+  let showTerminal = $state(false);
+  let layoutWcRef: ReturnType<typeof WindowControls> | undefined = $state();
+
+  const dragExclude = "button, a, input, select, textarea, [role='button'], [onclick], .window-controls, .resize-handle";
+
+  async function handleLayoutHeaderMousedown(e: MouseEvent) {
+    if ((e.target as HTMLElement).closest(dragExclude)) return;
+    e.preventDefault();
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      getCurrentWindow().startDragging();
+    } catch {}
+  }
+
+  async function handleLayoutHeaderDblclick(e: MouseEvent) {
+    if ((e.target as HTMLElement).closest(dragExclude)) return;
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      getCurrentWindow().toggleMaximize();
+    } catch {}
+  }
+
+  async function handleSidebarMousedown(e: MouseEvent) {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest(dragExclude)) return;
+    e.preventDefault();
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      getCurrentWindow().startDragging();
+    } catch {}
+  }
+
+  async function handleSidebarDblclick(e: MouseEvent) {
+    if ((e.target as HTMLElement).closest(dragExclude)) return;
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      getCurrentWindow().toggleMaximize();
+    } catch {}
+  }
   let showSetupWizard = $state(false);
   let showAbout = $state(false);
   let showCliBrowser = $state(false);
@@ -141,6 +182,7 @@
 
   function startResize(e: MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     const startX = e.clientX;
     const startWidth = sidebarWidth;
     dbg("layout", "sidebar resize start", { startWidth });
@@ -666,6 +708,9 @@
       commandPaletteOpen = !commandPaletteOpen;
     });
     keybindingStore.registerCallback("app:newChat", newChat);
+    keybindingStore.registerCallback("app:toggleTerminal", () => {
+      showTerminal = !showTerminal;
+    });
 
     // Immediate refresh when chat page signals a status change
     function onRunsChanged() {
@@ -796,6 +841,7 @@
       keybindingStore.unregisterCallback("app:toggleSidebar");
       keybindingStore.unregisterCallback("app:commandPalette");
       keybindingStore.unregisterCallback("app:newChat");
+      keybindingStore.unregisterCallback("app:toggleTerminal");
       window.removeEventListener("ocv:runs-changed", onRunsChanged);
       window.removeEventListener("ocv:favorites-changed", onFavoritesChanged);
       window.removeEventListener("ocv:show-wizard", onShowWizard);
@@ -1230,17 +1276,30 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="fixed top-0 left-0 right-0 z-[9999]"
+  style="height: 6px; cursor: default;"
+  onmousedown={handleLayoutHeaderMousedown}
+  ondblclick={handleLayoutHeaderDblclick}
+></div>
+
 <div class="flex h-screen overflow-hidden">
   <!-- Sidebar: Icon Rail + Content Panel -->
   {#if sidebarOpen}
-    <aside class="flex shrink-0 bg-sidebar text-sidebar-foreground transition-all duration-200">
+    <!-- svelte-ignore a11y_no_static_element_interactions a11y_no_noninteractive_element_interactions -->
+    <aside
+      class="flex shrink-0 sidebar-depth text-sidebar-foreground transition-all duration-200"
+      onmousedown={handleSidebarMousedown}
+      ondblclick={handleSidebarDblclick}
+    >
       <!-- A. Icon Rail -->
       <div
         class="flex w-[44px] flex-col items-center border-r border-sidebar-border bg-black/[0.03] dark:bg-black/20"
       >
         <!-- Rail logo (OC) -->
         <div class="flex h-14 w-full items-center justify-center border-b border-sidebar-border">
-          <img src="/logo.png?v=2" alt="OC" class="h-8 w-8 rounded-lg" />
+          <img src="/logo.png?v=2" alt="OC" class="h-8 w-8 aspect-square object-contain" />
         </div>
 
         <!-- Rail nav icons -->
@@ -1257,7 +1316,7 @@
             >
               <!-- Active indicator bar -->
               {#if isActive}
-                <span class="absolute left-0 top-1.5 h-5 w-[3px] rounded-r-full bg-primary"></span>
+                <span class="absolute left-0 top-1.5 h-5 w-[3px] rounded-r-full bg-primary shadow-[2px_0_8px_hsl(var(--primary)/0.3)]"></span>
               {/if}
               {#if item.icon === "message"}
                 <svg
@@ -1353,6 +1412,25 @@
               title="About OpenCovibe">v0.1</button
             >
           </div>
+          <button
+            class="flex h-9 w-9 items-center justify-center rounded-md transition-colors duration-150
+              {showTerminal
+              ? 'text-primary bg-primary/10 hover:bg-primary/15'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent/50'}"
+            onclick={() => (showTerminal = !showTerminal)}
+            title="{t('terminal_title')} (Ctrl+`)"
+          >
+            <svg
+              class="h-[18px] w-[18px]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></svg
+            >
+          </button>
           <div class="relative mx-auto mb-0.5">
             <button
               class="flex h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors duration-150"
@@ -2125,7 +2203,7 @@
               </div>
             {:else}
               <!-- Project folder tree -->
-              <div class="flex-1 overflow-y-auto px-2 py-1">
+              <div class="flex-1 overflow-y-auto px-2.5 py-2">
                 {#each projectFolders as folder (folder.folderKey)}
                   <ProjectFolderItem
                     {folder}
@@ -2220,7 +2298,7 @@
         <!-- Resize handle -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
-          class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors z-10"
+          class="resize-handle absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors z-10"
           onmousedown={startResize}
         ></div>
       </div>
@@ -2228,11 +2306,16 @@
   {/if}
 
   <!-- Main content -->
-  <div class="flex flex-1 flex-col overflow-hidden">
+  <div class="flex flex-1 flex-col overflow-hidden ambient-bg">
     <UpdateBanner />
     <!-- Top bar (non-chat pages only — chat uses SessionStatusBar) -->
     {#if !isChatPage}
-      <header class="flex h-14 items-center gap-3 border-b px-4">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <header
+        class="flex h-14 items-center gap-3 pl-4 glass-header border-b border-border/40"
+        onmousedown={handleLayoutHeaderMousedown}
+        ondblclick={handleLayoutHeaderDblclick}
+      >
         <button
           class="rounded-md p-1.5 hover:bg-accent transition-all duration-150"
           onclick={toggleSidebar}
@@ -2261,13 +2344,21 @@
           >
           <span class="font-medium">{pageName}</span>
         </div>
+
+        <div class="ml-auto">
+          <WindowControls bind:this={layoutWcRef} />
+        </div>
       </header>
     {/if}
 
     <!-- Page content -->
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 min-h-0 overflow-y-auto">
       {@render children()}
     </main>
+
+    {#if showTerminal}
+      <SystemTerminalPanel cwd={projectCwd || "/"} onClose={() => (showTerminal = false)} />
+    {/if}
   </div>
 </div>
 

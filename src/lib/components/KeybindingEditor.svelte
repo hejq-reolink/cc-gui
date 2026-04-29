@@ -76,7 +76,7 @@
 
 <div class="flex items-center gap-3 py-1.5 group">
   <!-- Label -->
-  <span class="text-sm text-foreground min-w-[140px]">{binding.label}</span>
+  <span class="text-sm text-foreground min-w-[140px]">{binding.labelKey ? t(binding.labelKey) : binding.label}</span>
 
   <!-- Key display / recording -->
   {#if recording}

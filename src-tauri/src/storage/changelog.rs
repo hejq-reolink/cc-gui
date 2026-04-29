@@ -39,11 +39,21 @@ pub struct ChangelogEntry {
     pub changes: Vec<String>,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangelogPayload {
+    pub entries: Vec<ChangelogEntry>,
+    pub requested_locale: String,
+    pub content_locale: String,
+}
+
 // ── Public API ──
 
 /// Fetch and parse the Claude Code CHANGELOG.md from GitHub.
 /// Results are cached for 10 minutes.
-pub async fn get_changelog() -> Result<Vec<ChangelogEntry>, String> {
+pub async fn get_changelog(locale: Option<String>) -> Result<ChangelogPayload, String> {
+    let requested_locale = locale.unwrap_or_else(|| "en".to_string());
+
     // Check cache
     {
         let cache = CACHE.lock().await;
@@ -54,7 +64,11 @@ pub async fn get_changelog() -> Result<Vec<ChangelogEntry>, String> {
                     entry.entries.len(),
                     entry.fetched_at.elapsed().as_secs_f64()
                 );
-                return Ok(entry.entries.clone());
+                return Ok(ChangelogPayload {
+                    entries: entry.entries.clone(),
+                    requested_locale,
+                    content_locale: "en".to_string(),
+                });
             }
         }
     }
@@ -89,7 +103,11 @@ pub async fn get_changelog() -> Result<Vec<ChangelogEntry>, String> {
         });
     }
 
-    Ok(entries)
+    Ok(ChangelogPayload {
+        entries,
+        requested_locale,
+        content_locale: "en".to_string(),
+    })
 }
 
 // ── Parser ──

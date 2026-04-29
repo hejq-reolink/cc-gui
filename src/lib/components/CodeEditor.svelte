@@ -17,8 +17,8 @@
     LanguageDescription,
   } from "@codemirror/language";
   import { classHighlighter } from "@lezer/highlight";
+  import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
   import { languages } from "@codemirror/language-data";
-  import { oneDark } from "@codemirror/theme-one-dark";
   import { dbg, dbgWarn } from "$lib/utils/debug";
   import { fileName } from "$lib/utils/format";
   import { resolveStaticLanguage, resolveByFirstLine } from "$lib/utils/codemirror-languages";
@@ -41,7 +41,6 @@
   let view: EditorView | undefined = $state();
   let updating = false;
 
-  const themeCompartment = new Compartment();
   const langCompartment = new Compartment();
 
   /** Race condition guard: only apply the latest language resolution. */
@@ -120,15 +119,10 @@
     });
   }
 
-  function isDarkMode(): boolean {
-    return typeof document !== "undefined" && document.documentElement.classList.contains("dark");
-  }
-
   onMount(() => {
     if (!editorEl) return;
 
-    const dark = isDarkMode();
-    dbg("code-editor", "mount", { filePath, readonly, dark });
+    dbg("code-editor", "mount", { filePath, readonly });
 
     const state = EditorState.create({
       doc: content,
@@ -150,14 +144,11 @@
           ...defaultKeymap,
           ...historyKeymap,
         ]),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        // Static tok-* class fallback: if style-mod CSS injection fails
-        // (observed on Intel Mac WKWebView), the static CSS in <style> below
-        // provides baseline syntax highlighting via classHighlighter.
         syntaxHighlighting(classHighlighter),
+        syntaxHighlighting(oneDarkHighlightStyle, { fallback: false }),
+        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         EditorView.editable.of(!readonly),
         EditorState.readOnly.of(readonly),
-        themeCompartment.of(dark ? oneDark : []),
         langCompartment.of([]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !updating) {
@@ -179,21 +170,7 @@
       if (lang.length > 0) verifySyntaxStyles(view);
     });
 
-    // Watch dark mode changes via MutationObserver on <html> class
-    const observer = new MutationObserver(() => {
-      if (!view) return;
-      const dark = isDarkMode();
-      view.dispatch({
-        effects: themeCompartment.reconfigure(dark ? oneDark : []),
-      });
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
     return () => {
-      observer.disconnect();
       view?.destroy();
       view = undefined;
     };
@@ -327,71 +304,71 @@
     text-decoration: line-through;
   }
 
-  /* ── Dark mode (oneDark-aligned) ── */
+  /* ── Dark mode (VSCode Dark+ aligned) ── */
   :global(.dark) .code-editor-wrapper :global(.tok-keyword) {
-    color: #c678dd;
+    color: #569cd6;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-atom) {
-    color: #d19a66;
+    color: #569cd6;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-bool) {
-    color: #d19a66;
+    color: #569cd6;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-number) {
-    color: #d19a66;
+    color: #b5cea8;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-string) {
-    color: #98c379;
+    color: #ce9178;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-string2) {
-    color: #e06c75;
+    color: #ce9178;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-comment) {
-    color: #5c6370;
+    color: #6a9955;
     font-style: italic;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-variableName) {
-    color: #e06c75;
+    color: #9cdcfe;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-variableName2) {
-    color: #e06c75;
+    color: #9cdcfe;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-variableName.tok-definition) {
-    color: #61afef;
+    color: #dcdcaa;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-typeName) {
-    color: #e5c07b;
+    color: #4ec9b0;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-namespace) {
-    color: #e5c07b;
+    color: #4ec9b0;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-className) {
-    color: #e5c07b;
+    color: #4ec9b0;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-macroName) {
-    color: #e06c75;
+    color: #dcdcaa;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-propertyName) {
-    color: #61afef;
+    color: #9cdcfe;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-propertyName.tok-definition) {
-    color: #61afef;
+    color: #9cdcfe;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-operator) {
-    color: #56b6c2;
+    color: #d4d4d4;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-meta) {
-    color: #abb2bf;
+    color: #d4d4d4;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-punctuation) {
-    color: #abb2bf;
+    color: #d4d4d4;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-link) {
-    color: #61afef;
+    color: #569cd6;
     text-decoration: underline;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-heading) {
-    color: #e06c75;
+    color: #569cd6;
     font-weight: bold;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-emphasis) {
@@ -404,10 +381,10 @@
     color: #f44747;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-inserted) {
-    color: #98c379;
+    color: #b5cea8;
   }
   :global(.dark) .code-editor-wrapper :global(.tok-deleted) {
-    color: #e06c75;
+    color: #ce9178;
     text-decoration: line-through;
   }
 </style>

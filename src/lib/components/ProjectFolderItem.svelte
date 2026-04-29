@@ -98,10 +98,10 @@
   });
 </script>
 
-<div class="group/folder mb-0.5">
+<div class="group/folder mb-2 sidebar-glass-card p-1">
   <!-- Folder header -->
   <div
-    class="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors cursor-pointer"
+    class="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent/40 transition-colors cursor-pointer"
     role="button"
     tabindex="0"
     onclick={onToggle}
@@ -118,7 +118,7 @@
   >
     <!-- Chevron -->
     <svg
-      class="h-3 w-3 shrink-0 text-muted-foreground/60 transition-transform duration-150 {expanded
+      class="h-3 w-3 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-spring {expanded
         ? 'rotate-90'
         : ''}"
       viewBox="0 0 24 24"
@@ -204,8 +204,8 @@
   </div>
 
   <!-- Expanded children -->
-  {#if expanded}
-    <div class="pl-3">
+  <div class="sidebar-expand {expanded ? 'expanded' : ''}">
+    <div class="pl-2">
       {#if children}
         {@render children()}
       {:else}
@@ -248,5 +248,5 @@
         {/if}
       {/if}
     </div>
-  {/if}
+  </div>
 </div>

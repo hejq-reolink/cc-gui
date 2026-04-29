@@ -90,7 +90,7 @@
             <div class="space-y-1">
               {#each globalBindings as b (b.command)}
                 <div class="flex items-center justify-between py-0.5">
-                  <span class="text-xs text-foreground/80">{b.label}</span>
+                  <span class="text-xs text-foreground/80">{b.labelKey ? t(b.labelKey) : b.label}</span>
                   <kbd
                     class="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/70"
                     >{formatKeyDisplay(b.key)}</kbd
@@ -112,7 +112,7 @@
             <div class="space-y-1">
               {#each chatBindings as b (b.command)}
                 <div class="flex items-center justify-between py-0.5">
-                  <span class="text-xs text-foreground/80">{b.label}</span>
+                  <span class="text-xs text-foreground/80">{b.labelKey ? t(b.labelKey) : b.label}</span>
                   <kbd
                     class="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/70"
                     >{formatKeyDisplay(b.key)}</kbd
@@ -131,7 +131,7 @@
           <div class="space-y-1">
             {#each promptBindings as b (b.command)}
               <div class="flex items-center justify-between py-0.5">
-                <span class="text-xs text-foreground/80">{b.label}</span>
+                <span class="text-xs text-foreground/80">{b.labelKey ? t(b.labelKey) : b.label}</span>
                 <kbd
                   class="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/70"
                   >{formatKeyDisplay(b.key)}</kbd
@@ -194,7 +194,7 @@
               <div class="mt-2 space-y-1">
                 {#each cliBindings as b (b.command)}
                   <div class="flex items-center justify-between py-0.5">
-                    <span class="text-xs text-foreground/50">{b.label}</span>
+                    <span class="text-xs text-foreground/50">{b.labelKey ? t(b.labelKey) : b.label}</span>
                     <kbd
                       class="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/50"
                       >{formatKeyDisplay(b.key)}</kbd

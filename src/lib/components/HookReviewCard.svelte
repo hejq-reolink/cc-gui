@@ -47,12 +47,12 @@
     </p>
     <div class="flex gap-2">
       <button
-        class="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-500/20 transition-all disabled:opacity-50"
+        class="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-medium text-green-600 dark:text-green-400 hover:bg-green-500/20 transition-all disabled:opacity-50"
         disabled={submitting}
         onclick={() => handleRespond("allow")}>{t("common_allow")}</button
       >
       <button
-        class="rounded-md border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50"
+        class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50"
         disabled={submitting}
         onclick={() => handleRespond("deny")}>{t("common_deny")}</button
       >

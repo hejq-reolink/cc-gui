@@ -33,9 +33,9 @@
 
   const dots: Record<DisplayStatus, string> = {
     pending: "bg-amber-500",
-    running: "bg-blue-500 animate-pulse",
+    running: "bg-blue-500 animate-gentle-pulse",
     done: "bg-cyan-500",
-    waiting: "bg-amber-500 animate-pulse",
+    waiting: "bg-amber-500 animate-gentle-pulse",
     completed: "bg-emerald-500",
     failed: "bg-red-500",
     stopped: "bg-gray-500",

@@ -11,11 +11,17 @@
     attachments,
     thinkingText,
     onRewind,
+    folded = false,
+    onToggleFold,
+    showTokenEstimate = false,
   }: {
     message: ChatMessage;
     attachments?: Attachment[];
     thinkingText?: string;
     onRewind?: () => void;
+    folded?: boolean;
+    onToggleFold?: () => void;
+    showTokenEstimate?: boolean;
   } = $props();
 
   function isImage(att: Attachment): boolean {
@@ -31,6 +37,7 @@
 
   const lineCount = $derived(message.content.split("\n").length);
   const isLong = $derived(isUser && lineCount > 10);
+  const estimatedTokens = $derived(Math.ceil(message.content.length / 4));
 
   function formatTime(ts: string): string {
     const d = new Date(ts);
@@ -162,6 +169,29 @@
           >
         {/if}
       </button>
+      {#if onToggleFold}
+        <button
+          class="p-1 rounded-md text-muted-foreground/50 hover:bg-muted hover:text-foreground transition-all duration-150 {hovered ? 'opacity-100' : 'opacity-0'}"
+          onclick={onToggleFold}
+          title={folded ? t("chat_unfoldMessage") : t("chat_foldMessage")}
+          data-export-exclude
+        >
+          <svg
+            class="h-3.5 w-3.5 transition-transform {folded ? '' : 'rotate-90'}"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"><path d="m9 18 6-6-6-6" /></svg
+          >
+        </button>
+      {/if}
+      {#if showTokenEstimate && estimatedTokens > 0}
+        <span class="text-[9px] text-muted-foreground/40 font-mono tabular-nums">
+          {t("chat_estimatedTokens", { tokens: String(estimatedTokens) })}
+        </span>
+      {/if}
       <span class="text-[10px] text-muted-foreground" title={formatFullTime(message.timestamp)}>
         {formatTime(message.timestamp)}
       </span>
@@ -169,7 +199,23 @@
     <!-- Content: indented to align with text after icon -->
     <div class="pl-7 text-sm text-foreground leading-relaxed">
       {#if isUser}
-        {#if attachments && attachments.length > 0}
+        {#if folded}
+          <p
+            class="max-h-16 overflow-hidden whitespace-pre-wrap text-muted-foreground"
+            style="mask-image: linear-gradient(to bottom, black 50%, transparent);"
+          >
+            {message.content.slice(0, 200)}
+          </p>
+          {#if onToggleFold}
+            <button
+              class="mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              onclick={onToggleFold}
+            >
+              {t("chat_unfoldMessage")}
+            </button>
+          {/if}
+        {:else}
+          {#if attachments && attachments.length > 0}
           <div class="flex flex-wrap gap-2 mb-2">
             {#each attachments as att}
               {#if isImage(att) && att.contentBase64}
@@ -204,6 +250,7 @@
         {:else}
           <p class="whitespace-pre-wrap">{message.content}</p>
         {/if}
+        {/if}
       {:else}
         {#if thinkingText}
           <button
@@ -230,7 +277,24 @@
           {/if}
         {/if}
         <div class="prose-chat">
-          <MarkdownContent text={message.content} />
+          {#if folded}
+            <p
+              class="max-h-16 overflow-hidden text-sm text-muted-foreground"
+              style="mask-image: linear-gradient(to bottom, black 50%, transparent);"
+            >
+              {message.content.slice(0, 200)}
+            </p>
+            {#if onToggleFold}
+              <button
+                class="mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onclick={onToggleFold}
+              >
+                {t("chat_unfoldMessage")}
+              </button>
+            {/if}
+          {:else}
+            <MarkdownContent text={message.content} />
+          {/if}
         </div>
       {/if}
     </div>

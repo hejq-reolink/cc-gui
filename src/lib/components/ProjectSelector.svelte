@@ -83,7 +83,7 @@
     <div class="fixed inset-0 z-40" onclick={() => (open = false)}></div>
 
     <div
-      class="z-50 max-h-[60vh] overflow-y-auto rounded-md border border-sidebar-border bg-sidebar py-1 shadow-lg"
+      class="z-50 max-h-[60vh] overflow-y-auto rounded-lg border border-sidebar-border bg-sidebar py-1 shadow-lg"
       style={dropdownStyle}
     >
       <!-- All Projects -->

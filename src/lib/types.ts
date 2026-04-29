@@ -164,6 +164,7 @@ export interface RemoteHost {
   remote_cwd?: string;
   remote_claude_path?: string;
   forward_api_key: boolean;
+  password?: string;
 }
 
 export interface RemoteTestResult {
@@ -183,6 +184,8 @@ export interface KeyBinding {
   context: "global" | "chat" | "prompt" | "cli";
   editable: boolean;
   source: "app" | "cli";
+  /** i18n key for the label (falls back to `label` when missing). */
+  labelKey?: string;
   /** If true, this binding is also registered as an OS-level global shortcut. */
   osGlobal?: boolean;
 }
@@ -295,6 +298,15 @@ export interface ProjectInitStatus {
 export interface CliDistTags {
   latest?: string;
   stable?: string;
+}
+
+export interface CliUpgradeResult {
+  success: boolean;
+  installMethod: string;
+  commandRun: string;
+  previousVersion?: string;
+  newVersion?: string;
+  error?: string;
 }
 
 export interface LocalProxyStatus {
@@ -1125,6 +1137,12 @@ export interface ChangelogEntry {
   version: string;
   date: string;
   changes: string[];
+}
+
+export interface ChangelogPayload {
+  entries: ChangelogEntry[];
+  requestedLocale: string;
+  contentLocale: string;
 }
 
 // ── Hook config types (mirrors ~/.claude/settings.json hooks) ──

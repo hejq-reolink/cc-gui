@@ -6,6 +6,7 @@
   import * as api from "$lib/api";
   import {
     SessionStore,
+    TabManager,
     KeybindingStore,
     getEventMiddleware,
     loadCliInfo,
@@ -86,8 +87,14 @@
   import { mapSettled } from "$lib/utils/async-utils";
   import { uuid } from "$lib/utils/uuid";
   import RewindModal from "$lib/components/RewindModal.svelte";
+  import FileReviewPanel from "$lib/components/FileReviewPanel.svelte";
+  import SessionTabBar from "$lib/components/SessionTabBar.svelte";
+  import CompareView from "$lib/components/CompareView.svelte";
+  import ChatDragOverlay from "$lib/components/ChatDragOverlay.svelte";
   import type { ElementSelection } from "$lib/types";
   import { isElementSelection } from "$lib/types";
+  import { CLI_TO_APP_MODE, APP_TO_CLI_MODE, getPermModeLabel } from "$lib/utils/chat-permissions";
+  import { isLocalhostUrl, formatElementContext } from "$lib/utils/chat-preview";
 
   // ── Helpers ──
 
@@ -96,8 +103,15 @@
   const keybindingStore = getContext<KeybindingStore>("keybindings");
 
   // ── Store + Middleware ──
-  const store = new SessionStore();
+  const tabManager = new TabManager();
+  let store = $derived(tabManager.activeStore);
   const middleware = getEventMiddleware();
+
+  let compareViewOpen = $state(false);
+  let compareStoreA = $state<SessionStore | null>(null);
+  let compareStoreB = $state<SessionStore | null>(null);
+  let compareLabelA = $state("A");
+  let compareLabelB = $state("B");
 
   // ── UI-only state (not in store) ──
   let middlewareReady = $state(false);
@@ -105,6 +119,10 @@
   let xtermRef: XTerminal | undefined = $state();
   let promptRef: PromptInput | undefined = $state();
   let sidebarCollapsed = $state(false);
+  let foldedMessages = $state(new Set<string>());
+  let fileReviewOpen = $state(false);
+  let fileReviewInitialFile = $state<string | undefined>(undefined);
+  let gitSummary = $state<import("$lib/types").GitSummary | null>(null);
   /** Reactive cwd override for new-chat-in-folder (cleared when a run is loaded) */
   let folderCwdOverride = $state("");
   let chatAreaRef: HTMLDivElement | undefined = $state();
@@ -1102,6 +1120,7 @@
   // Start middleware + register handlers
   onMount(() => {
     let destroyed = false;
+    tabManager.setMiddleware(middleware);
     (async () => {
       try {
         await middleware.start();
@@ -1810,37 +1829,6 @@
     dbg("chat", "init hint dismissed");
   }
 
-  // ── Permission mode name translation ──
-  // Store/dropdown use CLI names; UserSettings uses app names; adapter.rs maps app→CLI.
-  const CLI_TO_APP_MODE: Record<string, string> = {
-    default: "ask",
-    acceptEdits: "auto_read",
-    bypassPermissions: "auto_all",
-    plan: "plan",
-    auto: "auto",
-    dontAsk: "dont_ask",
-  };
-  const APP_TO_CLI_MODE: Record<string, string> = {
-    ask: "default",
-    auto_read: "acceptEdits",
-    auto_all: "bypassPermissions",
-    plan: "plan",
-    auto: "auto",
-    dont_ask: "dontAsk",
-  };
-
-  function getPermModeLabel(mode: string): string {
-    const map: Record<string, () => string> = {
-      default: () => t("prompt_permAskShort"),
-      acceptEdits: () => t("prompt_permAutoReadShort"),
-      bypassPermissions: () => t("prompt_permAutoAllShort"),
-      plan: () => t("prompt_permPlanShort"),
-      auto: () => t("prompt_permAutoShort"),
-      dontAsk: () => t("prompt_permDontAskShort"),
-    };
-    return map[mode]?.() ?? mode;
-  }
-
   let permissionModeChangeSeq = 0;
   let pendingPersist: Promise<void> = Promise.resolve();
 
@@ -1883,7 +1871,7 @@
     if (seq !== permissionModeChangeSeq) return false;
 
     if (opts?.toast !== false) {
-      showChatToast(t("toast_permissionMode", { mode: getPermModeLabel(newMode) }));
+      showChatToast(t("toast_permissionMode", { mode: getPermModeLabel(newMode, t) }));
     }
 
     // Persist — serialized to prevent concurrent writes overwriting each other.
@@ -2200,18 +2188,6 @@
 
   // ── Preview helpers ──
 
-  function isLocalhostUrl(url: string): boolean {
-    try {
-      const u = new URL(url);
-      return (
-        ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"].includes(u.hostname) &&
-        ["http:", "https:"].includes(u.protocol)
-      );
-    } catch {
-      return false;
-    }
-  }
-
   async function openPreview(url: string): Promise<"ok" | "invalid_url" | "open_failed"> {
     dbg("preview", "openPreview", { url });
     if (!isLocalhostUrl(url)) return "invalid_url";
@@ -2252,27 +2228,6 @@
     }
     appendCommandOutput(t(result === "invalid_url" ? "preview_invalidUrl" : "preview_openFailed"));
     return false;
-  }
-
-  function formatElementContext(sel: ElementSelection): string {
-    const lines = [
-      `[Page Element]`,
-      `URL: ${sel.url}`,
-      `Path: ${sel.domPath}`,
-      `Tag: ${sel.tagName}`,
-    ];
-    if (sel.textContent) lines.push(`Text: "${sel.textContent.slice(0, 200)}"`);
-    const attrs = Object.entries(sel.attributes)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${k}="${v}"`)
-      .join(", ");
-    if (attrs) lines.push(`Attributes: ${attrs}`);
-    const styles = Object.entries(sel.styleSummary)
-      .map(([k, v]) => `${k}=${v}`)
-      .join(", ");
-    if (styles) lines.push(`Styles: ${styles}`);
-    lines.push(`HTML: ${sel.outerHtmlSnippet.slice(0, 500)}`);
-    return lines.join("\n");
   }
 
   async function handleRalphCancel() {
@@ -2988,6 +2943,28 @@
     sidebarCollapsed = !sidebarCollapsed;
   }
 
+  function toggleFold(messageId: string) {
+    const next = new Set(foldedMessages);
+    if (next.has(messageId)) next.delete(messageId);
+    else next.add(messageId);
+    foldedMessages = next;
+  }
+
+  function openFileReview(file?: string) {
+    fileReviewInitialFile = file;
+    fileReviewOpen = true;
+  }
+
+  $effect(() => {
+    const phase = store.phase;
+    const cwd = store.sessionCwd;
+    if ((phase === "idle" || phase === "completed") && cwd) {
+      import("$lib/api").then((api) =>
+        api.getGitSummary(cwd).then((s) => (gitSummary = s)).catch(() => {}),
+      );
+    }
+  });
+
   async function scrollToTool(toolUseId: string) {
     // Cancel progressive rendering so full timeline is available
     if (renderLimit !== Infinity) {
@@ -3481,122 +3458,112 @@
   </div>
 {/snippet}
 
-<div class="flex h-full overflow-hidden bg-background relative">
-  <!-- Page-level drag overlay (drag-hover or processing spinner) -->
+<div class="flex flex-col h-full overflow-hidden bg-background relative">
   {#if pageDragActive || dragProcessing}
-    <div
-      class="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-[2px]"
-    >
-      <div
-        class="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 px-12 py-8"
-      >
-        {#if dragProcessing}
-          <svg
-            class="h-8 w-8 text-primary/60 animate-spin"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-          </svg>
-          <span class="text-sm font-medium text-primary/70">{t("drag_processing")}</span>
-        {:else}
-          <svg
-            class="h-8 w-8 text-primary/60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" x2="12" y1="3" y2="15" />
-          </svg>
-          <span class="text-sm font-medium text-primary/70">{t("prompt_dropFiles")}</span>
-        {/if}
-      </div>
-    </div>
+    <ChatDragOverlay
+      processing={dragProcessing}
+      dropLabel={t("prompt_dropFiles")}
+      processingLabel={t("drag_processing")}
+    />
   {/if}
 
+  <!-- Status bar (full width, above content + sidebar) -->
+  <SessionStatusBar
+    bind:this={statusBarRef}
+    running={store.sessionAlive}
+    run={store.run}
+    agent={store.run?.agent ?? store.agent}
+    model={store.model}
+    cost={store.usage.cost}
+    inputTokens={cumulativeTokens.input}
+    outputTokens={cumulativeTokens.output}
+    cacheReadTokens={cumulativeTokens.cacheRead}
+    cacheWriteTokens={cumulativeTokens.cacheWrite}
+    parentRunId={store.run?.parent_run_id}
+    onEndSession={handleStop}
+    onFork={forkOverlay ? undefined : () => handleResume("fork")}
+    onModelChange={handleModelChange}
+    effort={store.features.effortSelector ? currentEffort : undefined}
+    onEffortChange={store.features.effortSelector ? handleEffortChange : undefined}
+    onNavigateParent={store.run?.parent_run_id
+      ? () => goto(`/chat?run=${store.run!.parent_run_id}`)
+      : undefined}
+    cwd={store.effectiveCwd}
+    onToggleSidebar={toggleLayoutSidebar}
+    mcpServers={store.mcpServers}
+    onMcpToggle={() => (mcpPanelOpen = !mcpPanelOpen)}
+    cliVersion={store.cliVersion}
+    permissionMode={store.permissionMode}
+    {platformModels}
+    fastModeState={store.fastModeState}
+    verbose={verboseEnabled}
+    numTurns={store.numTurns}
+    durationMs={store.durationMs}
+    persistedFiles={store.persistedFiles}
+    onRewind={store.sessionAlive && !store.isRunning ? handleRewind : undefined}
+    contextUtilization={store.contextUtilization}
+    contextWarningLevel={store.contextWarningLevel}
+    contextWindow={store.contextWindow}
+    lastCompactedAt={store.lastCompactedAt}
+    compactCount={store.compactCount}
+    microcompactCount={store.microcompactCount}
+    turnUsages={store.turnUsages}
+    activeTaskCount={store.activeBackgroundTasks.length}
+    mode={store.run ? (store.useStreamSession ? "Stream" : "CLI") : ""}
+    toolsCount={sidebarCollapsed ? sidebarToolsCount : 0}
+    onToolsClick={sidebarCollapsed ? toggleSidebar : undefined}
+    remoteHostName={store.remoteHostName}
+    onRename={store.run ? handleRename : undefined}
+    authSourceLabel={store.authSourceLabel}
+    authSourceCategory={store.authSourceCategory}
+    apiKeySource={store.apiKeySource}
+    {previewOpen}
+    onPreviewToggle={() => {
+      if (previewOpen && !previewUrlBarOpen) {
+        closePreview();
+      } else {
+        previewUrlBarOpen = !previewUrlBarOpen;
+        if (previewUrlBarOpen) {
+          requestAnimationFrame(() => {
+            const el = document.querySelector<HTMLInputElement>("#__preview-url-input");
+            el?.focus();
+            el?.select();
+          });
+        }
+      }
+    }}
+    onStatusClick={() => {
+      if (!hasSidebarData) return;
+      if (sidebarCollapsed) sidebarCollapsed = false;
+      sidebarRequestedTab = "info";
+    }}
+    onExportHtml={store.run ? () => void handleExportHtml() : undefined}
+  />
+
+  <SessionTabBar
+    tabs={tabManager.tabs}
+    activeTabId={tabManager.activeTabId}
+    onSwitch={(tabId) => tabManager.switchTab(tabId)}
+    onClose={(tabId) => tabManager.closeTab(tabId)}
+    onAdd={() => tabManager.addTab()}
+    onRename={(tabId, label) => tabManager.renameTab(tabId, label)}
+    onCompare={(a, b) => {
+      const tabA = tabManager.tabs.find((t) => t.id === a);
+      const tabB = tabManager.tabs.find((t) => t.id === b);
+      if (tabA && tabB) {
+        compareStoreA = tabA.store;
+        compareStoreB = tabB.store;
+        compareLabelA = tabA.label;
+        compareLabelB = tabB.label;
+        compareViewOpen = true;
+      }
+    }}
+  />
+
+  <!-- Content area: main + sidebar side by side -->
+  <div class="flex flex-1 overflow-hidden min-h-0">
   <!-- Main content area -->
   <div class="flex flex-1 flex-col min-w-0 relative">
-    <!-- Status bar -->
-    <SessionStatusBar
-      bind:this={statusBarRef}
-      running={store.sessionAlive}
-      run={store.run}
-      agent={store.run?.agent ?? store.agent}
-      model={store.model}
-      cost={store.usage.cost}
-      inputTokens={cumulativeTokens.input}
-      outputTokens={cumulativeTokens.output}
-      cacheReadTokens={cumulativeTokens.cacheRead}
-      cacheWriteTokens={cumulativeTokens.cacheWrite}
-      parentRunId={store.run?.parent_run_id}
-      onEndSession={handleStop}
-      onFork={forkOverlay ? undefined : () => handleResume("fork")}
-      onModelChange={handleModelChange}
-      effort={store.features.effortSelector ? currentEffort : undefined}
-      onEffortChange={store.features.effortSelector ? handleEffortChange : undefined}
-      onNavigateParent={store.run?.parent_run_id
-        ? () => goto(`/chat?run=${store.run!.parent_run_id}`)
-        : undefined}
-      cwd={store.effectiveCwd}
-      onToggleSidebar={toggleLayoutSidebar}
-      mcpServers={store.mcpServers}
-      onMcpToggle={() => (mcpPanelOpen = !mcpPanelOpen)}
-      cliVersion={store.cliVersion}
-      permissionMode={store.permissionMode}
-      {platformModels}
-      fastModeState={store.fastModeState}
-      verbose={verboseEnabled}
-      numTurns={store.numTurns}
-      durationMs={store.durationMs}
-      persistedFiles={store.persistedFiles}
-      onRewind={store.sessionAlive && !store.isRunning ? handleRewind : undefined}
-      contextUtilization={store.contextUtilization}
-      contextWarningLevel={store.contextWarningLevel}
-      contextWindow={store.contextWindow}
-      lastCompactedAt={store.lastCompactedAt}
-      compactCount={store.compactCount}
-      microcompactCount={store.microcompactCount}
-      turnUsages={store.turnUsages}
-      activeTaskCount={store.activeBackgroundTasks.length}
-      mode={store.run ? (store.useStreamSession ? "Stream" : "CLI") : ""}
-      toolsCount={sidebarCollapsed ? sidebarToolsCount : 0}
-      onToolsClick={sidebarCollapsed ? toggleSidebar : undefined}
-      remoteHostName={store.remoteHostName}
-      onRename={store.run ? handleRename : undefined}
-      authSourceLabel={store.authSourceLabel}
-      authSourceCategory={store.authSourceCategory}
-      apiKeySource={store.apiKeySource}
-      {previewOpen}
-      onPreviewToggle={() => {
-        if (previewOpen && !previewUrlBarOpen) {
-          closePreview();
-        } else {
-          previewUrlBarOpen = !previewUrlBarOpen;
-          if (previewUrlBarOpen) {
-            requestAnimationFrame(() => {
-              const el = document.querySelector<HTMLInputElement>("#__preview-url-input");
-              el?.focus();
-              el?.select();
-            });
-          }
-        }
-      }}
-      onStatusClick={() => {
-        if (!hasSidebarData) return;
-        if (sidebarCollapsed) sidebarCollapsed = false;
-        sidebarRequestedTab = "info";
-      }}
-      onExportHtml={store.run ? () => void handleExportHtml() : undefined}
-    />
 
     <!-- MCP panel (floating below status bar) -->
     {#if mcpPanelOpen && store.mcpServers.length > 0}
@@ -3913,6 +3880,9 @@
                         onRewind={entry.cliUuid && store.sessionAlive && !store.isRunning
                           ? () => handleRewindToMessage(entry)
                           : undefined}
+                        folded={foldedMessages.has(entry.id)}
+                        onToggleFold={() => toggleFold(entry.id)}
+                        showTokenEstimate
                       />
                     {:else if entry.kind === "assistant"}
                       <ChatMessage
@@ -3923,6 +3893,9 @@
                           timestamp: entry.ts,
                         }}
                         thinkingText={entry.thinkingText}
+                        folded={foldedMessages.has(entry.id)}
+                        onToggleFold={() => toggleFold(entry.id)}
+                        showTokenEstimate
                       />
                     {:else if entry.kind === "tool"}
                       {#if claudeTurnStarts.has(i)}
@@ -4612,6 +4585,12 @@
         availableSkills={store.availableSkills}
         {skillItems}
         agents={preloadedAgents.map((a) => ({ name: a.name, description: a.description }))}
+        {remoteHosts}
+        remoteHostName={store.remoteHostName}
+        onRemoteHostChange={(name) => {
+          store.remoteHostName = name;
+          try { localStorage.setItem("ocv:last-target", name ?? ""); } catch {}
+        }}
         hasStash={!!stashedInput}
         {userHistory}
         runId={store.run?.id ?? ""}
@@ -4633,16 +4612,37 @@
       timeline={store.timeline}
       tools={store.tools}
       turnUsages={store.turnUsages}
+      compactEvents={store.compactEvents}
       {contextHistory}
       persistedFiles={store.persistedFiles}
       sessionInfo={currentSessionInfo}
+      {gitSummary}
       collapsed={sidebarCollapsed}
       onToggle={toggleSidebar}
       onScrollToTool={scrollToTool}
       onScrollToTurn={(anchorId) => scrollToMessage(anchorId)}
+      onOpenReview={openFileReview}
       bind:requestedTab={sidebarRequestedTab}
       backgroundTasks={store.taskNotifications}
       activeBackgroundTasks={store.activeBackgroundTasks}
+    />
+  {/if}
+  </div>
+
+  <FileReviewPanel
+    bind:open={fileReviewOpen}
+    cwd={store.sessionCwd}
+    {gitSummary}
+    initialFile={fileReviewInitialFile}
+  />
+
+  {#if compareStoreA && compareStoreB}
+    <CompareView
+      bind:open={compareViewOpen}
+      storeA={compareStoreA}
+      storeB={compareStoreB}
+      labelA={compareLabelA}
+      labelB={compareLabelB}
     />
   {/if}
 

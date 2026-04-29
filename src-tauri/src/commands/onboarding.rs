@@ -183,11 +183,11 @@ pub async fn run_claude_login(app: AppHandle) -> Result<bool, String> {
 
     if let Some(stdout) = child.stdout.take() {
         let app_clone = app.clone();
-        tokio::spawn(async move { stream_pipe_to_events(stdout, app_clone, "login stdout").await });
+        tokio::spawn(async move { stream_pipe_to_events(stdout, app_clone, "login stdout", "setup-progress", "setup-progress-replace").await });
     }
     if let Some(stderr) = child.stderr.take() {
         let app_clone = app.clone();
-        tokio::spawn(async move { stream_pipe_to_events(stderr, app_clone, "login stderr").await });
+        tokio::spawn(async move { stream_pipe_to_events(stderr, app_clone, "login stderr", "setup-progress", "setup-progress-replace").await });
     }
 
     // Wait for exit (3 min timeout — user needs to complete browser auth)
@@ -458,6 +458,8 @@ async fn stream_pipe_to_events(
     pipe: impl tokio::io::AsyncRead + Unpin,
     app: AppHandle,
     label: &'static str,
+    event_append: &str,
+    event_replace: &str,
 ) {
     use tokio::io::AsyncReadExt;
 
@@ -500,13 +502,13 @@ async fn stream_pipe_to_events(
                     // \r = progress bar update → replace last line (throttled)
                     if last_replace.elapsed() >= throttle {
                         log::trace!("[onboarding] {} (replace): {}", label, cleaned);
-                        let _ = app.emit("setup-progress-replace", &cleaned);
+                        let _ = app.emit(event_replace, &cleaned);
                         last_replace = std::time::Instant::now();
                     }
                 } else {
                     // \n = new line → append
                     log::trace!("[onboarding] {} (append): {}", label, cleaned);
-                    let _ = app.emit("setup-progress", &cleaned);
+                    let _ = app.emit(event_append, &cleaned);
                 }
             }
         }
@@ -517,7 +519,7 @@ async fn stream_pipe_to_events(
     if !remaining.is_empty() {
         if let Some(cleaned) = sanitize_progress_line(&remaining) {
             log::trace!("[onboarding] {} (final): {}", label, cleaned);
-            let _ = app.emit("setup-progress", &cleaned);
+            let _ = app.emit(event_append, &cleaned);
         }
     }
 }
@@ -617,6 +619,208 @@ async fn check_npm_available() -> bool {
             major >= 18
         }
         _ => false,
+    }
+}
+
+/// Detect how the Claude CLI was installed on this system.
+fn detect_cli_install_method() -> String {
+    #[cfg(windows)]
+    {
+        if let Some(p) = claude_stream::which_binary("claude") {
+            let lower = p.to_lowercase();
+            if lower.contains("\\npm\\") || lower.contains("\\node_modules\\") {
+                return "npm".into();
+            }
+            if lower.contains("\\programs\\claude-code\\") {
+                return "powershell".into();
+            }
+        }
+        if which_binary("winget") {
+            if let Ok(o) = std::process::Command::new("winget")
+                .args(["list", "--id", "Anthropic.ClaudeCode", "--accept-source-agreements"])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .output()
+            {
+                if o.status.success() {
+                    let out = String::from_utf8_lossy(&o.stdout);
+                    if out.contains("Anthropic.ClaudeCode") {
+                        return "winget".into();
+                    }
+                }
+            }
+        }
+        if which_binary("npm") {
+            if let Ok(o) = std::process::Command::new("npm")
+                .args(["list", "-g", "@anthropic-ai/claude-code", "--depth=0"])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .output()
+            {
+                let out = String::from_utf8_lossy(&o.stdout);
+                if out.contains("@anthropic-ai/claude-code") {
+                    return "npm".into();
+                }
+            }
+        }
+        "powershell".into()
+    }
+    #[cfg(not(windows))]
+    {
+        if which_binary("brew") {
+            if let Ok(o) = std::process::Command::new("brew")
+                .args(["list", "claude-code"])
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .output()
+            {
+                if o.status.success() {
+                    return "brew".into();
+                }
+            }
+        }
+        if which_binary("npm") {
+            if let Ok(o) = std::process::Command::new("npm")
+                .args(["list", "-g", "@anthropic-ai/claude-code", "--depth=0"])
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .output()
+            {
+                let out = String::from_utf8_lossy(&o.stdout);
+                if out.contains("@anthropic-ai/claude-code") {
+                    return "npm".into();
+                }
+            }
+        }
+        "native".into()
+    }
+}
+
+fn get_upgrade_command(method: &str) -> (String, Vec<String>) {
+    match method {
+        "brew" => ("brew".into(), vec!["upgrade".into(), "claude-code".into()]),
+        "npm" => (
+            "npm".into(),
+            vec![
+                "install".into(),
+                "-g".into(),
+                "@anthropic-ai/claude-code@latest".into(),
+            ],
+        ),
+        "winget" => (
+            "winget".into(),
+            vec![
+                "upgrade".into(),
+                "--id".into(),
+                "Anthropic.ClaudeCode".into(),
+                "-e".into(),
+                "--accept-source-agreements".into(),
+                "--accept-package-agreements".into(),
+            ],
+        ),
+        #[cfg(windows)]
+        _ => (
+            "powershell.exe".into(),
+            vec![
+                "-NoProfile".into(),
+                "-Command".into(),
+                "irm https://claude.ai/install.ps1 | iex".into(),
+            ],
+        ),
+        #[cfg(not(windows))]
+        _ => (
+            "bash".into(),
+            vec![
+                "-c".into(),
+                "curl -fsSL https://claude.ai/install.sh | bash".into(),
+            ],
+        ),
+    }
+}
+
+#[tauri::command]
+pub async fn upgrade_cli(app: AppHandle) -> Result<crate::models::CliUpgradeResult, String> {
+    let method = detect_cli_install_method();
+    let (cmd, args) = get_upgrade_command(&method);
+    let resolved_cmd = claude_stream::which_binary(&cmd)
+        .unwrap_or_else(|| cmd.clone());
+    let command_run = format!("{} {}", cmd, args.join(" "));
+    log::info!(
+        "[onboarding] upgrade_cli: method={}, cmd={}, resolved={}",
+        method, command_run, resolved_cmd
+    );
+
+    let previous_version = get_current_cli_version().await;
+
+    let mut child = Command::new(&resolved_cmd)
+        .args(&args)
+        .env("PATH", claude_stream::augmented_path())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .hide_console()
+        .kill_on_drop(true)
+        .spawn()
+        .map_err(|e| format!("Failed to spawn upgrade command '{}' (resolved: '{}'): {}", cmd, resolved_cmd, e))?;
+
+    if let Some(stdout) = child.stdout.take() {
+        let app_clone = app.clone();
+        tokio::spawn(async move {
+            stream_pipe_to_events(stdout, app_clone, "upgrade stdout", "cli-upgrade-progress", "cli-upgrade-progress-replace").await;
+        });
+    }
+    if let Some(stderr) = child.stderr.take() {
+        let app_clone = app.clone();
+        tokio::spawn(async move {
+            stream_pipe_to_events(stderr, app_clone, "upgrade stderr", "cli-upgrade-progress", "cli-upgrade-progress-replace").await;
+        });
+    }
+
+    let status = tokio::time::timeout(std::time::Duration::from_secs(300), child.wait())
+        .await
+        .map_err(|_| "Upgrade timed out after 5 minutes".to_string())?
+        .map_err(|e| format!("Upgrade process error: {}", e))?;
+
+    let new_version = get_current_cli_version().await;
+
+    Ok(crate::models::CliUpgradeResult {
+        success: status.success(),
+        install_method: method,
+        command_run,
+        previous_version,
+        new_version,
+        error: if status.success() {
+            None
+        } else {
+            Some(format!("Exit code: {:?}", status.code()))
+        },
+    })
+}
+
+async fn get_current_cli_version() -> Option<String> {
+    let claude_bin = claude_stream::resolve_claude_path();
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        Command::new(&claude_bin)
+            .arg("--version")
+            .env("PATH", claude_stream::augmented_path())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::null())
+            .hide_console()
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await
+    {
+        Ok(Ok(output)) if output.status.success() => {
+            let out = String::from_utf8_lossy(&output.stdout);
+            let trimmed = out.trim();
+            let version = trimmed
+                .find(" (")
+                .map(|i| &trimmed[..i])
+                .unwrap_or(trimmed);
+            Some(version.to_string())
+        }
+        _ => None,
     }
 }
 

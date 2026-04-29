@@ -46,6 +46,8 @@ rand = "0.8"
 if-addrs = "0.15.0"
 urlencoding = "2"
 rayon = "1"
+portable-pty = "0.8"
+tempfile = "3"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -21,21 +21,21 @@
   } = $props();
 
   const base =
-    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
+    "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 ease-spring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
 
   const variants: Record<Variant, string> = {
-    default: "bg-primary text-primary-foreground hover:bg-primary/90",
-    destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-    outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    default: "bg-primary text-primary-foreground shadow-apple-sm hover:bg-primary/90 hover:shadow-apple",
+    destructive: "bg-destructive text-destructive-foreground shadow-apple-sm hover:bg-destructive/90 hover:shadow-apple",
+    outline: "border border-input bg-background shadow-apple-sm hover:bg-accent hover:text-accent-foreground hover:shadow-apple",
+    secondary: "bg-secondary text-secondary-foreground shadow-apple-sm hover:bg-secondary/80 hover:shadow-apple",
     ghost: "hover:bg-accent hover:text-accent-foreground",
   };
 
   const sizes: Record<Size, string> = {
     sm: "h-8 rounded-md px-3 text-xs",
     default: "h-9 px-4 py-2",
-    lg: "h-10 rounded-md px-8",
-    icon: "h-9 w-9",
+    lg: "h-10 rounded-lg px-8",
+    icon: "h-9 w-9 rounded-lg",
   };
 </script>
 

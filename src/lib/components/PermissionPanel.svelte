@@ -111,7 +111,7 @@
 
 {#if pendingTools.length > 0}
   <div class="w-full chat-content-width pb-2 pt-1">
-    <div class="rounded-lg border border-amber-500/30 bg-background shadow-lg animate-fade-in">
+    <div class="rounded-2xl border border-amber-500/30 bg-background shadow-lg animate-fade-in">
       {#if isSingle}
         <!-- Single permission: compact card -->
         {@const item = pendingTools[0]}

@@ -28,5 +28,5 @@
   {oninput}
   {onblur}
   {onpaste}
-  class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 {className}"
+  class="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-apple-sm transition-all duration-200 ease-spring placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:border-ring/60 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 {className}"
 />

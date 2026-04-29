@@ -112,7 +112,7 @@
 
   {#if dropdownOpen}
     <div
-      class="w-80 max-h-96 overflow-y-auto rounded-lg border bg-background shadow-lg animate-fade-in"
+      class="w-80 max-h-96 overflow-y-auto rounded-2xl border bg-background shadow-lg animate-fade-in"
       style={dropdownStyle}
     >
       {#if isEmpty}

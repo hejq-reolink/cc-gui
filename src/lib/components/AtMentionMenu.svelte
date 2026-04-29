@@ -69,7 +69,7 @@
 
 <div
   bind:this={menuEl}
-  class="fixed z-50 rounded-lg border border-border bg-background shadow-lg animate-fade-in"
+  class="fixed z-50 rounded-2xl border border-border bg-background shadow-lg animate-fade-in"
   style="bottom: {bottom}px; left: {left}px; width: {width}px;"
 >
   <!-- Header -->

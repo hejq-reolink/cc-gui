@@ -244,7 +244,7 @@
     tabindex="-1"
   >
     <div
-      class="rounded-lg border border-border bg-background p-6 shadow-xl max-w-sm"
+      class="rounded-2xl border border-border bg-background p-6 shadow-xl max-w-sm"
       onclick={(e) => e.stopPropagation()}
       onkeydown={() => {}}
       role="document"
@@ -256,13 +256,13 @@
       </p>
       <div class="flex justify-end gap-2">
         <button
-          class="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
           onclick={() => (confirmDelete = null)}
         >
           Cancel
         </button>
         <button
-          class="rounded-md bg-destructive px-3 py-1.5 text-xs text-destructive-foreground hover:bg-destructive/90"
+          class="rounded-lg bg-destructive px-3 py-1.5 text-xs text-destructive-foreground hover:bg-destructive/90"
           onclick={() => confirmDelete && handleDelete(confirmDelete)}
         >
           {t("agent_deleteAgent")}
@@ -525,7 +525,7 @@
             {#if !selectedAgent.readonly && (selectedAgent.scope === "user" || selectedAgent.scope === "project")}
               <div class="flex gap-2 pt-2 border-t border-border">
                 <button
-                  class="rounded-md bg-primary/10 px-3 py-1.5 text-xs text-primary hover:bg-primary/20 transition-colors"
+                  class="rounded-lg bg-primary/10 px-3 py-1.5 text-xs text-primary hover:bg-primary/20 transition-colors"
                   onclick={() => {
                     editorState = { mode: "edit", agent: selectedAgent };
                   }}
@@ -533,7 +533,7 @@
                   {t("agent_editAgent")}
                 </button>
                 <button
-                  class="rounded-md bg-muted px-3 py-1.5 text-xs text-foreground hover:bg-muted/80 transition-colors"
+                  class="rounded-lg bg-muted px-3 py-1.5 text-xs text-foreground hover:bg-muted/80 transition-colors"
                   onclick={() => {
                     if (selectedAgent) {
                       renameState = {
@@ -547,7 +547,7 @@
                   {t("agent_renameAgent")}
                 </button>
                 <button
-                  class="rounded-md bg-destructive/10 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/20 transition-colors"
+                  class="rounded-lg bg-destructive/10 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/20 transition-colors"
                   onclick={() => (confirmDelete = selectedAgent)}
                 >
                   {t("agent_deleteAgent")}
@@ -579,7 +579,7 @@
     tabindex="-1"
   >
     <div
-      class="rounded-lg border border-border bg-background p-6 shadow-xl max-w-sm w-full"
+      class="rounded-2xl border border-border bg-background p-6 shadow-xl max-w-sm w-full"
       onclick={(e) => e.stopPropagation()}
       onkeydown={() => {}}
       role="document"
@@ -588,7 +588,7 @@
       <h3 class="text-sm font-semibold text-foreground mb-3">{t("agent_renameTitle")}</h3>
       <input
         type="text"
-        class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+        class="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
           focus:outline-none focus:ring-1 focus:ring-primary mb-1"
         bind:value={renameState.newName}
         onkeydown={(e) => {
@@ -603,13 +603,13 @@
       {/if}
       <div class="flex justify-end gap-2">
         <button
-          class="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+          class="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
           onclick={() => (renameState = null)}
         >
           Cancel
         </button>
         <button
-          class="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90
+          class="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90
             disabled:opacity-50"
           disabled={!renameState.newName || renameState.newName === renameState.agent.file_name}
           onclick={() => renameState && handleRename(renameState.agent, renameState.newName)}

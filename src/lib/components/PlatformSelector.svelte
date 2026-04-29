@@ -145,7 +145,7 @@
             {@const saved = findCredential(credentials, platform.id)}
             {@const platformHasKey = !!saved?.api_key}
             <button
-              class="flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm hover:bg-accent transition-colors
+              class="flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm hover:bg-accent transition-colors
                 {value === platform.id ? 'bg-accent font-medium' : ''}"
               onclick={() => selectPlatform(platform.id)}
             >

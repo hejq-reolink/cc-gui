@@ -233,6 +233,7 @@
 
     projectCwd = localStorage.getItem("ocv:project-cwd") ?? "";
     loading = true;
+
     const warnings: string[] = [];
     try {
       const results = await Promise.allSettled([
@@ -242,32 +243,22 @@
         listMarketplaces(),
       ]);
 
-      if (results[0].status === "fulfilled") {
-        plugins = results[0].value;
-      } else {
-        dbgWarn("plugins", "marketplace load error", results[0].reason);
-        warnings.push("marketplace plugins");
-      }
+      const labels = ["marketplace plugins", "installed plugins", "standalone skills", "marketplaces"];
+      const targets = [
+        (v: any) => { plugins = v; },
+        (v: any) => { installedPlugins = v; },
+        (v: any) => { skills = v; },
+        (v: any) => { marketplaces = v; },
+      ];
 
-      if (results[1].status === "fulfilled") {
-        installedPlugins = results[1].value;
-      } else {
-        dbgWarn("plugins", "installed plugins load error", results[1].reason);
-        warnings.push("installed plugins");
-      }
-
-      if (results[2].status === "fulfilled") {
-        skills = results[2].value;
-      } else {
-        dbgWarn("plugins", "skills load error", results[2].reason);
-        warnings.push("standalone skills");
-      }
-
-      if (results[3].status === "fulfilled") {
-        marketplaces = results[3].value;
-      } else {
-        dbgWarn("plugins", "marketplaces load error", results[3].reason);
-        warnings.push("marketplaces");
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].status === "fulfilled") {
+          targets[i]((results[i] as PromiseFulfilledResult<any>).value);
+        } else {
+          const reason = (results[i] as PromiseRejectedResult).reason;
+          dbgWarn("plugins", `${labels[i]} load error`, reason);
+          warnings.push(labels[i]);
+        }
       }
 
       loadWarnings = warnings;
@@ -816,7 +807,7 @@
     </div>
   {:else if loadError}
     <div class="flex flex-col items-center justify-center py-16 text-center">
-      <p class="text-sm text-destructive">
+      <p class="text-sm text-destructive mb-4">
         {t("plugin_loadFailed")}
       </p>
     </div>

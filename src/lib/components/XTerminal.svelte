@@ -19,6 +19,64 @@
   let terminal: import("@xterm/xterm").Terminal | undefined = $state();
   let fitAddon: import("@xterm/addon-fit").FitAddon | undefined = $state();
 
+  const DARK_THEME = {
+    background: "#0d0d0d",
+    foreground: "#e5e5e5",
+    cursor: "#e5e5e5",
+    cursorAccent: "#0d0d0d",
+    selectionBackground: "rgba(255,255,255,0.18)",
+    selectionForeground: undefined as string | undefined,
+    black: "#0d0d0d",
+    red: "#ef4444",
+    green: "#22c55e",
+    yellow: "#eab308",
+    blue: "#3b82f6",
+    magenta: "#a855f7",
+    cyan: "#06b6d4",
+    white: "#e5e5e5",
+    brightBlack: "#737373",
+    brightRed: "#f87171",
+    brightGreen: "#4ade80",
+    brightYellow: "#facc15",
+    brightBlue: "#60a5fa",
+    brightMagenta: "#c084fc",
+    brightCyan: "#22d3ee",
+    brightWhite: "#ffffff",
+  };
+
+  const LIGHT_THEME = {
+    background: "#fafaf9",
+    foreground: "#1c1917",
+    cursor: "#1c1917",
+    cursorAccent: "#fafaf9",
+    selectionBackground: "rgba(0,0,0,0.12)",
+    selectionForeground: undefined as string | undefined,
+    black: "#1c1917",
+    red: "#dc2626",
+    green: "#16a34a",
+    yellow: "#ca8a04",
+    blue: "#2563eb",
+    magenta: "#9333ea",
+    cyan: "#0891b2",
+    white: "#f5f5f4",
+    brightBlack: "#a8a29e",
+    brightRed: "#ef4444",
+    brightGreen: "#22c55e",
+    brightYellow: "#eab308",
+    brightBlue: "#3b82f6",
+    brightMagenta: "#a855f7",
+    brightCyan: "#06b6d4",
+    brightWhite: "#ffffff",
+  };
+
+  function isDark() {
+    return document.documentElement.classList.contains("dark");
+  }
+
+  function getTheme() {
+    return isDark() ? DARK_THEME : LIGHT_THEME;
+  }
+
   export function writeData(data: Uint8Array) {
     terminal?.write(data);
   }
@@ -31,9 +89,17 @@
     terminal?.clear();
   }
 
+  export function refit() {
+    if (fitAddon && terminal) {
+      fitAddon.fit();
+      onResize(terminal.cols, terminal.rows);
+    }
+  }
+
   onMount(() => {
     let resizeObserver: ResizeObserver | undefined;
     let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+    let themeObserver: MutationObserver | undefined;
 
     (async () => {
       const { Terminal } = await import("@xterm/xterm");
@@ -43,34 +109,14 @@
       if (!containerEl) return;
 
       const hasInput = !!onDataProp;
+      const theme = getTheme();
+
       const term = new Terminal({
         disableStdin: !hasInput,
         cursorBlink: hasInput,
         fontSize: 13,
         fontFamily: "'SF Mono', 'Menlo', 'Consolas', monospace",
-        theme: {
-          background: "#0a0a0a",
-          foreground: "#e5e5e5",
-          cursor: "#e5e5e5",
-          cursorAccent: "#0a0a0a",
-          selectionBackground: "rgba(255,255,255,0.2)",
-          black: "#0a0a0a",
-          red: "#ef4444",
-          green: "#22c55e",
-          yellow: "#eab308",
-          blue: "#3b82f6",
-          magenta: "#a855f7",
-          cyan: "#06b6d4",
-          white: "#e5e5e5",
-          brightBlack: "#737373",
-          brightRed: "#f87171",
-          brightGreen: "#4ade80",
-          brightYellow: "#facc15",
-          brightBlue: "#60a5fa",
-          brightMagenta: "#c084fc",
-          brightCyan: "#22d3ee",
-          brightWhite: "#ffffff",
-        },
+        theme,
         scrollback: 10000,
         convertEol: true,
         allowProposedApi: true,
@@ -83,7 +129,16 @@
       term.open(containerEl);
       fit.fit();
 
-      // Forward keystrokes to PTY when input is enabled
+      // Re-check theme after a frame — the initial getTheme() may have run
+      // before the layout's $effect toggled the dark class on <html>
+      requestAnimationFrame(() => {
+        const currentTheme = getTheme();
+        if (currentTheme.background !== theme.background) {
+          term.options.theme = currentTheme;
+          if (containerEl) containerEl.style.background = currentTheme.background;
+        }
+      });
+
       if (onDataProp) {
         term.onData((data) => {
           onDataProp(data);
@@ -93,7 +148,22 @@
       terminal = term;
       fitAddon = fit;
 
-      // Resize observer with debounce
+      // Watch for theme changes on <html> class attribute
+      themeObserver = new MutationObserver(() => {
+        const newTheme = getTheme();
+        term.options.theme = newTheme;
+        if (containerEl) {
+          containerEl.style.background = newTheme.background;
+        }
+      });
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+
+      // Set initial container background
+      containerEl.style.background = theme.background;
+
       resizeObserver = new ResizeObserver(() => {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(() => {
@@ -106,7 +176,6 @@
       });
       resizeObserver.observe(containerEl);
 
-      // Signal ready
       dbg("xterm", "ready", { cols: term.cols, rows: term.rows });
       onReady(term.cols, term.rows);
     })();
@@ -114,6 +183,7 @@
     return () => {
       clearTimeout(resizeTimer);
       resizeObserver?.disconnect();
+      themeObserver?.disconnect();
       terminal?.dispose();
     };
   });
@@ -122,25 +192,26 @@
 <div
   bind:this={containerEl}
   class="xterm-container {className}"
-  style="width: 100%; height: 100%; background: #0a0a0a;"
+  style="width: 100%; height: 100%;"
 ></div>
 
 <style>
   :global(.xterm-container .xterm) {
     height: 100%;
-    padding: 4px 8px;
+    background-color: inherit;
   }
   :global(.xterm-container .xterm-viewport) {
     overflow-y: auto;
+    background-color: inherit !important;
   }
   :global(.xterm-container .xterm-viewport::-webkit-scrollbar) {
     width: 6px;
   }
   :global(.xterm-container .xterm-viewport::-webkit-scrollbar-thumb) {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(128, 128, 128, 0.25);
     border-radius: 3px;
   }
   :global(.xterm-container .xterm-viewport::-webkit-scrollbar-thumb:hover) {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(128, 128, 128, 0.45);
   }
 </style>

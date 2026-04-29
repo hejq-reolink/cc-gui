@@ -36,11 +36,42 @@ pub fn expand_local_tilde(path: &str) -> String {
     path.to_string()
 }
 
+/// Extract port from a localhost URL (e.g. "http://localhost:4141/v1" → Some(4141)).
+pub fn extract_localhost_port(url: &str) -> Option<u16> {
+    let url_lower = url.to_ascii_lowercase();
+    let after_scheme = url_lower
+        .strip_prefix("http://")
+        .or_else(|| url_lower.strip_prefix("https://"))?;
+    let host_port = after_scheme.split('/').next()?;
+    let (host, port_str) = if let Some(idx) = host_port.rfind(':') {
+        (&host_port[..idx], &host_port[idx + 1..])
+    } else {
+        return None;
+    };
+    if host != "localhost" && host != "127.0.0.1" {
+        return None;
+    }
+    port_str.parse::<u16>().ok()
+}
+
 /// Build an SSH `Command` that runs `remote_shell_command` on the remote host.
-pub fn build_ssh_command(remote: &RemoteHost, remote_shell_command: &str) -> Command {
+/// When password auth is used (password set, no key_path), BatchMode is skipped
+/// and the caller must pipe the password to stdin.
+/// `reverse_forward_ports` adds `-R port:localhost:port` for each port so the
+/// remote host can reach local services (e.g. a localhost API proxy).
+pub fn build_ssh_command(
+    remote: &RemoteHost,
+    remote_shell_command: &str,
+    reverse_forward_ports: &[u16],
+) -> Command {
     let mut cmd = Command::new("ssh");
     cmd.hide_console();
-    cmd.arg("-o").arg("BatchMode=yes");
+
+    let use_password = remote.password.is_some() && remote.key_path.is_none();
+    if !use_password {
+        cmd.arg("-o").arg("BatchMode=yes");
+    }
+
     cmd.arg("-o").arg("ServerAliveInterval=30");
     cmd.arg("-o").arg("StrictHostKeyChecking=accept-new");
 
@@ -48,8 +79,11 @@ pub fn build_ssh_command(remote: &RemoteHost, remote_shell_command: &str) -> Com
         cmd.arg("-p").arg(remote.port.to_string());
     }
     if let Some(ref key) = remote.key_path {
-        // Expand ~/... for local key path (Command::arg doesn't go through shell)
         cmd.arg("-i").arg(expand_local_tilde(key));
+    }
+
+    for port in reverse_forward_ports {
+        cmd.arg("-R").arg(format!("{}:localhost:{}", port, port));
     }
 
     let target = format!("{}@{}", remote.user, remote.host);
@@ -57,10 +91,12 @@ pub fn build_ssh_command(remote: &RemoteHost, remote_shell_command: &str) -> Com
     cmd.arg(remote_shell_command);
 
     log::debug!(
-        "[ssh] build_ssh_command: target={}, port={}, key={:?}, cmd_len={}",
+        "[ssh] build_ssh_command: target={}, port={}, key={:?}, password={}, reverse_ports={:?}, cmd_len={}",
         target,
         remote.port,
         remote.key_path,
+        use_password,
+        reverse_forward_ports,
         remote_shell_command.len()
     );
 

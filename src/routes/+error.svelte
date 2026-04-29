@@ -24,11 +24,11 @@
     </div>
     <h1 class="text-xl font-bold mb-2">{t("error_title")}</h1>
     <p class="text-sm text-muted-foreground mb-4">
-      {$page.error?.message ?? t("error_defaultMessage")}
+      {$page.error?.message || t("error_defaultMessage")}
     </p>
     <a
       href="/chat"
-      class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+      class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
     >
       {t("error_backToChat")}
     </a>

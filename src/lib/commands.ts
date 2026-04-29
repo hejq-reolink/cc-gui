@@ -10,7 +10,9 @@ export type CommandAction =
 export interface CommandDef {
   id: string;
   name: string;
+  nameKey?: string;
   description: string;
+  descriptionKey?: string;
   category: CommandCategory;
   agent: CommandAgent;
   shortcut?: string;
@@ -23,7 +25,9 @@ export const commands: CommandDef[] = [
   {
     id: "switch-model",
     name: "Switch Model",
+    nameKey: "cmd_switchModel",
     description: "Change the AI model for the next message",
+    descriptionKey: "cmd_switchModelDesc",
     category: "chat",
     agent: "both",
     action: "open_modal",
@@ -32,7 +36,9 @@ export const commands: CommandDef[] = [
   {
     id: "compact",
     name: "Compact Conversation",
+    nameKey: "cmd_compact",
     description: "Compress the conversation to free up context",
+    descriptionKey: "cmd_compactDesc",
     category: "chat",
     agent: "claude",
     action: "send_prompt",
@@ -41,7 +47,9 @@ export const commands: CommandDef[] = [
   {
     id: "toggle-plan",
     name: "Toggle Plan Mode",
+    nameKey: "cmd_togglePlan",
     description: "Switch between plan mode (read-only) and normal mode",
+    descriptionKey: "cmd_togglePlanDesc",
     category: "chat",
     agent: "claude",
     action: "toggle_state",
@@ -50,7 +58,9 @@ export const commands: CommandDef[] = [
   {
     id: "review",
     name: "Review Changes",
+    nameKey: "cmd_reviewChanges",
     description: "Ask the agent to review recent code changes",
+    descriptionKey: "cmd_reviewChangesDesc",
     category: "chat",
     agent: "claude",
     action: "send_prompt",
@@ -60,7 +70,9 @@ export const commands: CommandDef[] = [
   {
     id: "export-chat",
     name: "Export Chat (Markdown)",
+    nameKey: "cmd_exportMd",
     description: "Export the conversation as a Markdown file",
+    descriptionKey: "cmd_exportMdDesc",
     category: "chat",
     agent: "both",
     shortcut: "Cmd+Shift+E",
@@ -70,7 +82,9 @@ export const commands: CommandDef[] = [
   {
     id: "export-chat-html",
     name: "Export Chat as HTML",
+    nameKey: "cmd_exportHtml",
     description: "Export the conversation as a self-contained HTML file with full visual fidelity",
+    descriptionKey: "cmd_exportHtmlDesc",
     category: "chat",
     agent: "both",
     shortcut: "Cmd+Shift+H",
@@ -80,7 +94,9 @@ export const commands: CommandDef[] = [
   {
     id: "new-claude",
     name: "New Claude Chat",
+    nameKey: "cmd_newClaude",
     description: "Start a new Claude Code conversation",
+    descriptionKey: "cmd_newClaudeDesc",
     category: "chat",
     agent: "both",
     action: "navigate",
@@ -99,7 +115,9 @@ export const commands: CommandDef[] = [
   {
     id: "stop-run",
     name: "Stop Run",
+    nameKey: "cmd_stopRun",
     description: "Stop the currently running agent process",
+    descriptionKey: "cmd_stopRunDesc",
     category: "chat",
     agent: "both",
     action: "ipc_command",
@@ -110,7 +128,9 @@ export const commands: CommandDef[] = [
   {
     id: "git-diff",
     name: "Git Diff",
+    nameKey: "cmd_gitDiffName",
     description: "View current git changes",
+    descriptionKey: "cmd_gitDiffDesc",
     category: "tools",
     agent: "both",
     shortcut: "Cmd+Shift+D",
@@ -120,7 +140,9 @@ export const commands: CommandDef[] = [
   {
     id: "git-status",
     name: "Git Status",
+    nameKey: "cmd_gitStatusName",
     description: "View git status summary",
+    descriptionKey: "cmd_gitStatusDesc",
     category: "tools",
     agent: "both",
     action: "ipc_command",
@@ -129,7 +151,9 @@ export const commands: CommandDef[] = [
   {
     id: "token-cost",
     name: "Token Cost",
+    nameKey: "cmd_tokenCost",
     description: "View token usage and cost for current run",
+    descriptionKey: "cmd_tokenCostDesc",
     category: "tools",
     agent: "both",
     action: "ipc_command",
@@ -140,7 +164,9 @@ export const commands: CommandDef[] = [
   {
     id: "go-chat",
     name: "Go to Chat",
+    nameKey: "cmd_goChat",
     description: "Navigate to the chat page",
+    descriptionKey: "cmd_goChatDesc",
     category: "navigation",
     agent: "both",
     action: "navigate",
@@ -149,7 +175,9 @@ export const commands: CommandDef[] = [
   {
     id: "go-settings",
     name: "Go to Settings",
+    nameKey: "cmd_goSettings",
     description: "Navigate to settings",
+    descriptionKey: "cmd_goSettingsDesc",
     category: "navigation",
     agent: "both",
     action: "navigate",
@@ -158,7 +186,9 @@ export const commands: CommandDef[] = [
   {
     id: "go-memory",
     name: "Go to Memory",
+    nameKey: "cmd_goMemory",
     description: "Navigate to the memory editor",
+    descriptionKey: "cmd_goMemoryDesc",
     category: "navigation",
     agent: "both",
     action: "navigate",
@@ -167,7 +197,9 @@ export const commands: CommandDef[] = [
   {
     id: "go-usage",
     name: "Go to Usage",
+    nameKey: "cmd_goUsage",
     description: "Navigate to usage statistics",
+    descriptionKey: "cmd_goUsageDesc",
     category: "navigation",
     agent: "both",
     action: "navigate",
@@ -186,7 +218,9 @@ export const commands: CommandDef[] = [
   {
     id: "go-plugins",
     name: "Go to Plugins",
+    nameKey: "cmd_goPlugins",
     description: "Browse plugins and skills",
+    descriptionKey: "cmd_goPluginsDesc",
     category: "navigation",
     agent: "both",
     action: "navigate",
@@ -197,7 +231,9 @@ export const commands: CommandDef[] = [
   {
     id: "set-model",
     name: "Set Default Model",
+    nameKey: "cmd_setModel",
     description: "Change the default model for the agent",
+    descriptionKey: "cmd_setModelDesc",
     category: "settings",
     agent: "both",
     action: "open_modal",
@@ -206,7 +242,9 @@ export const commands: CommandDef[] = [
   {
     id: "set-cwd",
     name: "Set Working Directory",
+    nameKey: "cmd_setCwd",
     description: "Change the project working directory",
+    descriptionKey: "cmd_setCwdDesc",
     category: "settings",
     agent: "both",
     action: "open_modal",
@@ -215,7 +253,9 @@ export const commands: CommandDef[] = [
   {
     id: "configure-tools",
     name: "Configure Tools",
+    nameKey: "cmd_configureTools",
     description: "Set allowed tools for the agent",
+    descriptionKey: "cmd_configureToolsDesc",
     category: "settings",
     agent: "both",
     action: "navigate",
@@ -224,7 +264,9 @@ export const commands: CommandDef[] = [
   {
     id: "permissions",
     name: "Permissions",
+    nameKey: "cmd_permissions",
     description: "Manage tool permission rules (allow/deny)",
+    descriptionKey: "cmd_permissionsDesc",
     category: "settings",
     agent: "both",
     action: "open_modal",
@@ -235,7 +277,9 @@ export const commands: CommandDef[] = [
   {
     id: "doctor",
     name: "Run Doctor",
+    nameKey: "cmd_runDoctor",
     description: "Check if agent CLIs are installed and working",
+    descriptionKey: "cmd_runDoctorDesc",
     category: "diagnostics",
     agent: "both",
     action: "ipc_command",
@@ -244,7 +288,9 @@ export const commands: CommandDef[] = [
   {
     id: "version",
     name: "Version Info",
+    nameKey: "cmd_versionInfoName",
     description: "Show OpenCovibe Desktop version information",
+    descriptionKey: "cmd_versionInfoDesc",
     category: "diagnostics",
     agent: "both",
     action: "open_modal",
@@ -252,14 +298,17 @@ export const commands: CommandDef[] = [
   },
 ];
 
-export function filterCommands(query: string, agent?: string): CommandDef[] {
+export function filterCommands(query: string, agent?: string, translateFn?: (key: string) => string): CommandDef[] {
   const q = query.toLowerCase();
   return commands.filter((cmd) => {
     if (agent && cmd.agent !== "both" && cmd.agent !== agent) return false;
     if (!q) return true;
+    const name = (translateFn && cmd.nameKey ? translateFn(cmd.nameKey) : cmd.name).toLowerCase();
+    const desc = (translateFn && cmd.descriptionKey ? translateFn(cmd.descriptionKey) : cmd.description).toLowerCase();
     return (
+      name.includes(q) ||
+      desc.includes(q) ||
       cmd.name.toLowerCase().includes(q) ||
-      cmd.description.toLowerCase().includes(q) ||
       cmd.id.includes(q)
     );
   });
@@ -285,4 +334,12 @@ export const categoryLabels: Record<CommandCategory, string> = {
   navigation: "Navigation",
   settings: "Settings",
   diagnostics: "Diagnostics",
+};
+
+export const categoryLabelKeys: Record<CommandCategory, string> = {
+  chat: "cmd_catChat",
+  tools: "cmd_catTools",
+  navigation: "cmd_catNavigation",
+  settings: "cmd_catSettings",
+  diagnostics: "cmd_catDiagnostics",
 };

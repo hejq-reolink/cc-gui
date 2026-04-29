@@ -1,25 +1,38 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { untrack } from "svelte";
   import { getChangelog } from "$lib/api";
+  import { currentLocale, getEntry, t } from "$lib/i18n/index.svelte";
   import { getCliVersionInfo_cached } from "$lib/stores";
-  import type { ChangelogEntry } from "$lib/types";
+  import type { ChangelogPayload } from "$lib/types";
+  import { isChangelogFallback } from "$lib/utils/changelog-locale";
   import { dbg, dbgWarn } from "$lib/utils/debug";
-  import { t } from "$lib/i18n/index.svelte";
 
-  let entries = $state<ChangelogEntry[]>([]);
+  let changelog = $state<ChangelogPayload | null>(null);
   let loading = $state(true);
   let error = $state("");
   let searchQuery = $state("");
+  let requestedLocale = $state("");
+  let loadRequestId = 0;
+
+  let entries = $derived(changelog?.entries ?? []);
+  let contentLocale = $derived(changelog?.contentLocale ?? "en");
+  let fallbackLocaleLabel = $derived(
+    getEntry(changelog?.requestedLocale ?? requestedLocale)?.label ??
+      (changelog?.requestedLocale ?? requestedLocale),
+  );
+  let showingLocaleFallback = $derived(
+    isChangelogFallback(changelog?.requestedLocale ?? requestedLocale, contentLocale),
+  );
 
   let filteredEntries = $derived.by(() => {
     if (!searchQuery.trim()) return entries;
     const q = searchQuery.trim().toLowerCase();
     return entries.filter(
-      (e) => e.version.includes(q) || e.changes.some((c) => c.toLowerCase().includes(q)),
+      (entry) =>
+        entry.version.includes(q) || entry.changes.some((change) => change.toLowerCase().includes(q)),
     );
   });
 
-  // Current CLI version: prefer cli-info cache (updated by session), fall back to localStorage
   let currentVersion = $derived(
     getCliVersionInfo_cached()?.installed ??
       (() => {
@@ -31,18 +44,50 @@
       })(),
   );
 
-  onMount(async () => {
+  function formatEntryDate(date: string): string {
+    if (!date) return "";
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return date;
+    return new Intl.DateTimeFormat(currentLocale(), {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(parsed);
+  }
+
+  async function loadEntries(locale: string, force = false) {
+    const nextLocale = locale || "en";
+    if (!force && untrack(() => requestedLocale === nextLocale && changelog !== null)) return;
+
+    requestedLocale = nextLocale;
+    const requestId = ++loadRequestId;
+    loading = true;
+    error = "";
+
     try {
-      dbg("release-notes", "loading changelog");
-      entries = await getChangelog();
-      dbg("release-notes", "loaded", { count: entries.length });
+      dbg("release-notes", "loading changelog", { locale: nextLocale });
+      const result = await getChangelog(nextLocale);
+      if (requestId !== loadRequestId) return;
+      changelog = result;
+      dbg("release-notes", "loaded", {
+        count: result.entries.length,
+        requestedLocale: result.requestedLocale,
+        contentLocale: result.contentLocale,
+      });
     } catch (e) {
+      if (requestId !== loadRequestId) return;
       const msg = e instanceof Error ? e.message : String(e);
       dbgWarn("release-notes", "failed to load", msg);
       error = msg;
     } finally {
-      loading = false;
+      if (requestId === loadRequestId) {
+        loading = false;
+      }
     }
+  }
+
+  $effect(() => {
+    void loadEntries(currentLocale());
   });
 </script>
 
@@ -161,17 +206,7 @@
         <p class="text-xs text-muted-foreground/60">{error}</p>
         <button
           class="mt-2 rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent transition-colors"
-          onclick={async () => {
-            loading = true;
-            error = "";
-            try {
-              entries = await getChangelog();
-            } catch (e) {
-              error = e instanceof Error ? e.message : String(e);
-            } finally {
-              loading = false;
-            }
-          }}>{t("common_retry")}</button
+          onclick={() => loadEntries(currentLocale(), true)}>{t("common_retry")}</button
         >
       </div>
     {:else if filteredEntries.length === 0}
@@ -187,7 +222,14 @@
         {/if}
       </div>
     {:else}
-      <div class="mx-auto max-w-3xl px-6 py-6 space-y-1">
+      {#if showingLocaleFallback}
+        <div class="mx-auto max-w-3xl px-6 pt-4">
+          <div class="rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+            {t("release_localeFallback", { locale: fallbackLocaleLabel })}
+          </div>
+        </div>
+      {/if}
+      <div class="mx-auto max-w-3xl px-6 {showingLocaleFallback ? 'py-4' : 'py-6'} space-y-1">
         {#each filteredEntries as entry}
           {@const isCurrent = currentVersion && entry.version === currentVersion}
           <div
@@ -211,7 +253,7 @@
                 >
               {/if}
               {#if entry.date}
-                <span class="text-[11px] text-muted-foreground">{entry.date}</span>
+                <span class="text-[11px] text-muted-foreground">{formatEntryDate(entry.date)}</span>
               {/if}
             </div>
 

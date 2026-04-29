@@ -37,6 +37,14 @@ export interface TurnUsage {
   durationMs?: number;
 }
 
+/** Tracks a context compaction event for visualization. */
+export interface CompactEvent {
+  turnIndex: number;
+  trigger: string;
+  preTokens?: number;
+  ts: string;
+}
+
 export const ACTIVE_PHASES: SessionPhase[] = ["spawning", "running"];
 export const TERMINAL_PHASES: SessionPhase[] = ["completed", "failed", "stopped"];
 export const SESSION_ALIVE_PHASES: SessionPhase[] = ["spawning", "running", "idle"];

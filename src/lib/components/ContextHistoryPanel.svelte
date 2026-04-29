@@ -5,19 +5,25 @@
    * and per-turn history for both context and cost.
    */
   import type { ContextSnapshot, SessionInfoData } from "$lib/types";
-  import type { TurnUsage } from "$lib/stores/types";
+  import type { TurnUsage, CompactEvent } from "$lib/stores/types";
   import { formatTokenCount, formatDuration, formatCost } from "$lib/utils/format";
   import { getColor, getIcon, computeContextDelta } from "$lib/utils/context-parser";
   import { t } from "$lib/i18n/index.svelte";
+  import ContextProgressBar from "./ContextProgressBar.svelte";
+  import TurnUsageChart from "./TurnUsageChart.svelte";
 
   let {
     history = [],
     turnUsages = [],
+    compactEvents = [],
     sessionInfo = null,
+    onScrollToTurn,
   }: {
     history: ContextSnapshot[];
     turnUsages?: TurnUsage[];
+    compactEvents?: CompactEvent[];
     sessionInfo?: SessionInfoData | null;
+    onScrollToTurn?: (turnIndex: number) => void;
   } = $props();
 
   let latest = $derived(history.length > 0 ? history[history.length - 1] : null);
@@ -135,6 +141,31 @@
   let hasResourceData = $derived(
     (sessionInfo && (sessionInfo.cost > 0 || sessionInfo.inputTokens > 0)) || turnUsages.length > 0,
   );
+
+  let contextUsedTokens = $derived(
+    sessionInfo
+      ? sessionInfo.inputTokens + (sessionInfo.cacheReadTokens ?? 0) + (sessionInfo.cacheWriteTokens ?? 0)
+      : 0,
+  );
+  let contextWindowSize = $derived(sessionInfo?.contextWindow ?? 0);
+  let contextWarning = $derived<"none" | "moderate" | "high" | "critical">(() => {
+    if (contextWindowSize <= 0) return "none";
+    const u = contextUsedTokens / contextWindowSize;
+    if (u >= 0.9) return "critical";
+    if (u >= 0.75) return "high";
+    if (u >= 0.5) return "moderate";
+    return "none";
+  });
+  let avgTokensPerTurn = $derived(
+    turnUsages.length > 0
+      ? turnUsages.reduce((s, tu) => s + tu.inputTokens + tu.outputTokens, 0) / turnUsages.length
+      : 0,
+  );
+  let estimatedTurnsLeft = $derived(
+    avgTokensPerTurn > 0 && contextWindowSize > 0
+      ? Math.max(0, Math.floor((contextWindowSize - contextUsedTokens) / avgTokensPerTurn))
+      : 0,
+  );
 </script>
 
 <div class="flex flex-col h-full overflow-hidden">
@@ -208,6 +239,19 @@
               </div>
             {/each}
           </div>
+        </div>
+      {/if}
+
+      <!-- Context gauge (progress bar with remaining estimate) -->
+      {#if contextWindowSize > 0}
+        <div class="px-3 py-2 border-b border-border/50">
+          <ContextProgressBar
+            usedTokens={contextUsedTokens}
+            contextWindow={contextWindowSize}
+            warningLevel={contextWarning}
+            compactCount={sessionInfo?.compactCount ?? 0}
+            {estimatedTurnsLeft}
+          />
         </div>
       {/if}
 
@@ -322,6 +366,18 @@
           <span class="text-[10px] text-yellow-600 dark:text-yellow-400"
             >{t("cliSync_usageIncompleteHint")}</span
           >
+        </div>
+      {/if}
+
+      <!-- Per-turn usage chart -->
+      {#if turnUsages.length > 1}
+        <div class="px-3 py-2 border-b border-border/50">
+          <TurnUsageChart
+            {turnUsages}
+            contextWindow={contextWindowSize}
+            {compactEvents}
+            {onScrollToTurn}
+          />
         </div>
       {/if}
 

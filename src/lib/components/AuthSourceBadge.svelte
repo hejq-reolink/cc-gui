@@ -193,7 +193,7 @@
 
     {#if dropdownOpen}
       <div
-        class="w-72 max-h-80 overflow-y-auto rounded-md border bg-background shadow-lg animate-fade-in"
+        class="w-72 max-h-80 overflow-y-auto rounded-lg border bg-background shadow-lg animate-fade-in"
         style={dropdownStyle}
       >
         <div class="p-2 space-y-1">
@@ -205,7 +205,7 @@
 
           <!-- CLI Auth option -->
           <button
-            class="flex w-full items-start gap-2.5 rounded-sm px-2.5 py-2 text-sm hover:bg-accent transition-colors
+            class="flex w-full items-start gap-2.5 rounded-md px-2.5 py-2 text-sm hover:bg-accent transition-colors
               {authOverview.auth_mode === 'cli' ? 'bg-accent' : ''}"
             onclick={() => selectMode("cli")}
           >
@@ -271,9 +271,9 @@
           </button>
 
           <!-- App API Key option (div wrapper for expandable platform sublist) -->
-          <div class="rounded-sm {authOverview.auth_mode === 'api' ? 'bg-accent' : ''}">
+          <div class="rounded-md {authOverview.auth_mode === 'api' ? 'bg-accent' : ''}">
             <button
-              class="flex w-full items-start gap-2.5 px-2.5 py-2 text-sm hover:bg-accent transition-colors rounded-sm"
+              class="flex w-full items-start gap-2.5 px-2.5 py-2 text-sm hover:bg-accent transition-colors rounded-md"
               onclick={() => selectMode("api")}
             >
               <span class="mt-0.5 inline-block h-3.5 w-3.5 shrink-0">
@@ -382,7 +382,7 @@
 
           <!-- Configure link -->
           <button
-            class="flex w-full items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            class="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             onclick={() => {
               dropdownOpen = false;
               goto("/settings");

@@ -287,6 +287,8 @@ pub struct RemoteHost {
     pub remote_claude_path: Option<String>,
     #[serde(default)]
     pub forward_api_key: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub password: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -630,6 +632,20 @@ pub struct CliCheckResult {
 pub struct CliDistTags {
     pub latest: Option<String>,
     pub stable: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliUpgradeResult {
+    pub success: bool,
+    pub install_method: String,
+    pub command_run: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub previous_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub new_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

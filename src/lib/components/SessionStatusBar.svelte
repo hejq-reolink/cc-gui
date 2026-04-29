@@ -8,6 +8,7 @@
   import { t } from "$lib/i18n/index.svelte";
   import { fmtNumber } from "$lib/i18n/format";
   import { truncate, formatTokenCount, formatDuration, formatCostDisplay } from "$lib/utils/format";
+  import WindowControls from "./WindowControls.svelte";
 
   let {
     run = null,
@@ -368,11 +369,36 @@
     if (fuzzy) return fuzzy.displayName;
     return model;
   });
+
+  let wcRef: ReturnType<typeof WindowControls> | undefined = $state();
+
+  async function handleHeaderMousedown(e: MouseEvent) {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest("button, a, input, select, textarea, .window-controls, [role='button'], [data-no-drag]")) return;
+    e.preventDefault();
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      getCurrentWindow().startDragging();
+    } catch {}
+  }
+
+  async function handleHeaderDblclick(e: MouseEvent) {
+    if ((e.target as HTMLElement).closest("button, a, input, select, textarea, .window-controls, [role='button'], [data-no-drag]")) return;
+    try {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      getCurrentWindow().toggleMaximize();
+    } catch {}
+  }
 </script>
 
-<div class="border-b border-border bg-muted/50 font-mono text-xs text-foreground/70">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+  class="border-b border-border/40 glass-header font-mono text-xs text-foreground/70"
+  onmousedown={handleHeaderMousedown}
+  ondblclick={handleHeaderDblclick}
+>
   <!-- Tier 1: Always visible (h-9) -->
-  <div class="flex h-9 items-center justify-between px-3">
+  <div class="flex h-9 items-center justify-between pl-3">
     <!-- Left: core info -->
     <div class="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
       {#if onToggleSidebar}
@@ -544,7 +570,7 @@
     </div>
 
     <!-- Right: actions + chevron -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1 shrink-0">
       {#if onExportHtml}
         <button
           class="flex items-center gap-1 rounded px-2 py-0.5 text-foreground/50 hover:text-foreground hover:bg-accent transition-colors"
@@ -564,7 +590,7 @@
               points="16 6 12 2 8 6"
             /><line x1="12" x2="12" y1="2" y2="15" /></svg
           >
-          Export
+          <span class="hidden sm:inline">Export</span>
         </button>
       {/if}
       {#if onPreviewToggle}
@@ -586,7 +612,7 @@
             stroke-linejoin="round"
             ><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></svg
           >
-          Preview
+          <span class="hidden sm:inline">Preview</span>
         </button>
       {/if}
       {#if !running && onRewind && persistedFiles && persistedFiles.length > 0}
@@ -607,7 +633,7 @@
               d="M3 3v5h5"
             /></svg
           >
-          {t("statusbar_rewind")}
+          <span class="hidden sm:inline">{t("statusbar_rewind")}</span>
         </button>
       {/if}
       {#if onFork && run?.session_id}
@@ -630,7 +656,7 @@
               r="3"
             /><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9" /><path d="M12 12v3" /></svg
           >
-          {t("statusbar_fork")}
+          <span class="hidden sm:inline">{t("statusbar_fork")}</span>
         </button>
       {/if}
       {#if running && onEndSession}
@@ -652,7 +678,8 @@
             onclick={requestEnd}
             title={t("statusbar_endTitle")}
           >
-            {t("statusbar_endSession")}
+            <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" x2="15" y1="9" y2="15"/><line x1="15" x2="9" y1="9" y2="15"/></svg>
+            <span class="hidden sm:inline">{t("statusbar_endSession")}</span>
           </button>
         {/if}
       {/if}
@@ -685,7 +712,10 @@
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
+
     </div>
+
+    <WindowControls bind:this={wcRef} />
   </div>
 
   <!-- Tier 2: Collapsible details (h-7) -->
@@ -858,14 +888,14 @@
     bind:this={dropdownEl}
     tabindex="-1"
     role="listbox"
-    class="min-w-[560px] w-max rounded-md border bg-background shadow-lg animate-fade-in outline-none"
+    class="min-w-[560px] w-max rounded-lg border bg-background shadow-lg animate-fade-in outline-none"
     style={dropdownStyle}
     onkeydown={handleDropdownKeydown}
   >
     <div class="p-1">
       {#each models as m, i}
         <button
-          class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-xs hover:bg-accent transition-colors {model ===
+          class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs hover:bg-accent transition-colors {model ===
           m.value
             ? 'bg-accent font-medium'
             : ''} {i === focusedModelIdx ? 'ring-1 ring-primary/50' : ''}"

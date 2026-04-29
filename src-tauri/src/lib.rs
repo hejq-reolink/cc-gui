@@ -138,6 +138,7 @@ pub fn run() {
         .manage(ws_generation)
         .manage(ws_effective_bind)
         .manage(ws_warning)
+        .manage(commands::terminal::new_pty_session_map())
         // NOTE: Currently ~60 IPC commands. If approaching 80+, consider grouping
         // into Tauri command modules or using a single dispatch command with typed payloads.
         .invoke_handler(tauri::generate_handler![
@@ -261,6 +262,7 @@ pub fn run() {
             commands::onboarding::get_auth_overview,
             commands::onboarding::set_cli_api_key,
             commands::onboarding::remove_cli_api_key,
+            commands::onboarding::upgrade_cli,
             commands::screenshot::capture_screenshot,
             commands::screenshot::update_screenshot_hotkey,
             commands::cli_sync::discover_cli_sessions,
@@ -274,6 +276,10 @@ pub fn run() {
             commands::web_server::get_local_ip,
             commands::preview::open_preview_window,
             commands::preview::close_preview_window,
+            commands::terminal::pty_spawn,
+            commands::terminal::pty_write,
+            commands::terminal::pty_resize,
+            commands::terminal::pty_close,
         ])
         .setup(move |app| {
             // Set up broadcast emitter (requires AppHandle, so must be in setup)
@@ -542,6 +548,11 @@ async fn graceful_shutdown_actors(app: &tauri::AppHandle) {
             let _ = child.kill().await;
             let _ = tokio::time::timeout(std::time::Duration::from_secs(2), child.wait()).await;
         }
+    }
+
+    // ── Kill PTY terminal sessions ──
+    if let Some(pty_map) = app.try_state::<commands::terminal::PtySessionMap>() {
+        commands::terminal::cleanup_all(&pty_map).await;
     }
 
     log::debug!("[app] graceful shutdown complete");

@@ -12,10 +12,10 @@
   } = $props();
 
   const variants: Record<Variant, string> = {
-    default: "rounded-lg border bg-background shadow-sm hover:shadow-md transition-shadow",
-    subtle: "rounded-lg border border-transparent bg-muted/50 hover:bg-muted/70 transition-colors",
+    default: "rounded-xl glass-card hover:shadow-apple-md transition-all duration-200 ease-spring",
+    subtle: "rounded-xl border border-transparent bg-muted/40 backdrop-blur-sm hover:bg-muted/60 transition-all duration-200 ease-spring",
     highlighted:
-      "rounded-lg border-2 border-primary/20 bg-background shadow-sm hover:shadow-md hover:border-primary/40 transition-all",
+      "rounded-xl border-2 border-primary/20 glass-card hover:shadow-apple-md hover:border-primary/40 transition-all duration-200 ease-spring",
   };
 </script>
 

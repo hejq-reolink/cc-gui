@@ -205,15 +205,59 @@ fn resolve_auth_env(remote: &Option<RemoteHost>, settings: &UserSettings) -> Res
         }
     }
 
-    // CLI mode: never inject a stale base_url — CLI manages its own connection
+    // CLI mode: for local sessions, CLI manages its own auth.
+    // For remote sessions with forward_api_key=true, read env vars from ~/.claude/settings.json
+    // and forward them so the remote CLI uses the local user's credentials.
+    if settings.auth_mode == "cli" || settings.auth_mode.is_empty() {
+        if remote.as_ref().map_or(false, |r| r.forward_api_key) {
+            let cli_config = crate::storage::cli_config::load_cli_config();
+            if let Some(env_obj) = cli_config.get("env").and_then(|v| v.as_object()) {
+                let auth_token = env_obj
+                    .get("ANTHROPIC_AUTH_TOKEN")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string());
+                let api_key = env_obj
+                    .get("ANTHROPIC_API_KEY")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string());
+                let cli_base_url = env_obj
+                    .get("ANTHROPIC_BASE_URL")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string());
+
+                if auth_token.is_some() || api_key.is_some() {
+                    log::debug!(
+                        "[session] resolve_auth_env: CLI mode + remote forward — forwarding CLI env (has_token={}, has_key={}, has_url={})",
+                        auth_token.is_some(),
+                        api_key.is_some(),
+                        cli_base_url.is_some()
+                    );
+                    return ResolvedAuth {
+                        api_key,
+                        auth_token,
+                        base_url: cli_base_url,
+                        models: None,
+                        extra_env: None,
+                    };
+                }
+            }
+        }
+        return ResolvedAuth {
+            api_key: None,
+            auth_token: None,
+            base_url: None,
+            models: None,
+            extra_env: None,
+        };
+    }
+
     ResolvedAuth {
         api_key: None,
         auth_token: None,
-        base_url: if settings.auth_mode == "cli" {
-            None
-        } else {
-            base_url
-        },
+        base_url,
         models: None,
         extra_env: None,
     }
@@ -1730,7 +1774,11 @@ async fn spawn_cli_process(
             models,
             extra_env,
         );
-        let mut ssh_cmd = crate::agent::ssh::build_ssh_command(remote, &remote_cmd);
+        let reverse_ports: Vec<u16> = base_url
+            .and_then(|u| crate::agent::ssh::extract_localhost_port(u))
+            .into_iter()
+            .collect();
+        let mut ssh_cmd = crate::agent::ssh::build_ssh_command(remote, &remote_cmd, &reverse_ports);
         ssh_cmd
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
@@ -1743,14 +1791,26 @@ async fn spawn_cli_process(
             effective_remote_cwd
         );
 
-        ssh_cmd
+        let mut spawned = ssh_cmd
             .hide_console()
             .kill_on_drop(true)
             .spawn()
             .map_err(|e| {
                 log::error!("[session] Failed to spawn ssh: {}", e);
                 format!("Failed to spawn ssh: {}", e)
-            })?
+            })?;
+
+        if remote.password.is_some() && remote.key_path.is_none() {
+            if let Some(ref mut stdin) = spawned.stdin {
+                use tokio::io::AsyncWriteExt;
+                let pw = format!("{}\n", remote.password.as_deref().unwrap());
+                if let Err(e) = stdin.write_all(pw.as_bytes()).await {
+                    log::error!("[session] Failed to write SSH password: {}", e);
+                }
+            }
+        }
+
+        spawned
     } else {
         // Local branch: existing logic
         let claude_bin = claude_stream::resolve_claude_path();
@@ -1932,8 +1992,13 @@ pub async fn side_question(
             resolved.models.as_deref(),
             resolved.extra_env.as_ref(),
         );
-        let mut ssh_cmd = crate::agent::ssh::build_ssh_command(remote_host, &remote_cmd);
+        let reverse_ports: Vec<u16> = resolved.base_url.as_deref()
+            .and_then(crate::agent::ssh::extract_localhost_port)
+            .into_iter()
+            .collect();
+        let mut ssh_cmd = crate::agent::ssh::build_ssh_command(remote_host, &remote_cmd, &reverse_ports);
         ssh_cmd
+            .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .kill_on_drop(true);
@@ -1980,6 +2045,18 @@ pub async fn side_question(
     let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to spawn side question CLI: {}", e))?;
+
+    if let Some(ref rh) = remote {
+        if rh.password.is_some() && rh.key_path.is_none() {
+            if let Some(ref mut stdin) = child.stdin {
+                use tokio::io::AsyncWriteExt;
+                let pw = format!("{}\n", rh.password.as_deref().unwrap());
+                if let Err(e) = stdin.write_all(pw.as_bytes()).await {
+                    log::error!("[session] Failed to write SSH password (side_question): {}", e);
+                }
+            }
+        }
+    }
 
     let stdout = child
         .stdout

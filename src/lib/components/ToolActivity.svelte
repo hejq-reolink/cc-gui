@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { HookEvent, ContextSnapshot, SessionInfoData, FileEntry } from "$lib/types";
-  import type { TimelineEntry, BusToolItem, TurnUsage } from "$lib/stores/types";
+  import type { TimelineEntry, BusToolItem, TurnUsage, CompactEvent } from "$lib/stores/types";
   import { getToolColor } from "$lib/utils/tool-colors";
   import { truncate, formatTokenCount, formatDuration } from "$lib/utils/format";
   import { getToolDetail as getToolDetailRaw } from "$lib/utils/tool-rendering";
   import { dbg } from "$lib/utils/debug";
   import { t } from "$lib/i18n/index.svelte";
   import ContextHistoryPanel from "$lib/components/ContextHistoryPanel.svelte";
-  import FilesPanel from "$lib/components/FilesPanel.svelte";
+  import EnhancedFilesPanel from "$lib/components/EnhancedFilesPanel.svelte";
   import SessionInfoPanel from "$lib/components/SessionInfoPanel.svelte";
   import StatusIcon from "$lib/components/StatusIcon.svelte";
   import {
@@ -23,13 +23,16 @@
     timeline = [],
     tools = [],
     turnUsages = [],
+    compactEvents = [],
     contextHistory = [],
     persistedFiles = [],
     sessionInfo = null,
+    gitSummary = null,
     collapsed = false,
     onToggle,
     onScrollToTool,
     onScrollToTurn,
+    onOpenReview,
     requestedTab = $bindable(null as "tools" | "context" | "files" | "info" | "tasks" | null),
     backgroundTasks = new Map(),
     activeBackgroundTasks = [],
@@ -37,13 +40,16 @@
     timeline: TimelineEntry[];
     tools: HookEvent[];
     turnUsages?: TurnUsage[];
+    compactEvents?: CompactEvent[];
     contextHistory?: ContextSnapshot[];
     persistedFiles?: unknown[];
     sessionInfo?: SessionInfoData | null;
+    gitSummary?: import("$lib/types").GitSummary | null;
     collapsed: boolean;
     onToggle: () => void;
     onScrollToTool?: (toolUseId: string) => void;
     onScrollToTurn?: (anchorId: string) => void;
+    onOpenReview?: (file?: string) => void;
     requestedTab?: "tools" | "context" | "files" | "info" | "tasks" | null;
     backgroundTasks?: Map<string, TaskNotificationItem>;
     activeBackgroundTasks?: TaskNotificationItem[];
@@ -379,7 +385,7 @@
   {@const detail = getToolDetail(node.tool)}
   {@const cat = categorizeBusStatus(node.tool.status)}
   <button
-    class="w-full text-left px-2.5 py-1 hover:bg-accent/50 rounded-sm transition-colors group"
+    class="w-full text-left px-2.5 py-1 hover:bg-accent/50 rounded-md transition-colors group"
     onclick={() => onScrollToTool?.(node.tool.tool_use_id)}
     title={t("toolActivity_scrollToTool")}
   >
@@ -623,9 +629,9 @@
         {/if}
       </div>
     {:else if activeTab === "context"}
-      <ContextHistoryPanel history={contextHistory} {turnUsages} {sessionInfo} />
+      <ContextHistoryPanel history={contextHistory} {turnUsages} {compactEvents} {sessionInfo} {onScrollToTurn} />
     {:else if activeTab === "files"}
-      <FilesPanel {fileEntries} {onScrollToTool} />
+      <EnhancedFilesPanel {fileEntries} {gitSummary} {onScrollToTool} {onOpenReview} />
     {:else if activeTab === "info"}
       <!-- Subagents section (shown above session info when Task tools exist) -->
       {#if subagents.length > 0}

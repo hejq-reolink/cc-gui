@@ -24,6 +24,7 @@ import {
   type SessionPhase,
   type UsageState,
   type TurnUsage,
+  type CompactEvent,
   ACTIVE_PHASES,
   TERMINAL_PHASES,
   SESSION_ALIVE_PHASES,
@@ -292,6 +293,8 @@ export class SessionStore {
   compactCount: number = $state(0);
   /** Number of micro-compaction events in this session. */
   microcompactCount: number = $state(0);
+  /** Chronological log of compaction events for context visualization. */
+  compactEvents: CompactEvent[] = $state([]);
 
   /** Remote host name (if this session runs on a remote machine). */
   remoteHostName = $state<string | null>(null);
@@ -1230,6 +1233,7 @@ export class SessionStore {
     this.lastCompactedAt = 0;
     this.compactCount = 0;
     this.microcompactCount = 0;
+    this.compactEvents = [];
     this.sessionCwd = "";
     this.sessionTools = [];
     this.outputStyle = "";
@@ -1310,6 +1314,7 @@ export class SessionStore {
       durationMs: this.durationMs,
       compactCount: this.compactCount,
       microcompactCount: this.microcompactCount,
+      compactEvents: this.compactEvents,
       persistedFiles: this.persistedFiles,
       unknownEventCount: this.unknownEventCount,
       rawFallbackCount: this.rawFallbackCount,
@@ -1378,6 +1383,7 @@ export class SessionStore {
       this.durationMs = (obj.durationMs as number) ?? 0;
       this.compactCount = (obj.compactCount as number) ?? 0;
       this.microcompactCount = (obj.microcompactCount as number) ?? 0;
+      this.compactEvents = (obj.compactEvents ?? []) as CompactEvent[];
       this.persistedFiles = (obj.persistedFiles ?? []) as unknown[];
       this.unknownEventCount = (obj.unknownEventCount as number) ?? 0;
       this.rawFallbackCount = (obj.rawFallbackCount as number) ?? 0;
@@ -1782,6 +1788,26 @@ export class SessionStore {
         if (this.isKnownSlashCommand(text)) {
           dbg("store", "skip response timeout for slash command", { cmd: text.split(" ")[0] });
         } else {
+          this._startResponseTimeout(this.run.id);
+        }
+      } else if (this.useStreamSession) {
+        dbg("store", "sendMessage: session dead, restarting session", { runId: this.run.id });
+        this._pushOptimisticUser(text, attachments);
+        this._setPhase("spawning");
+        const mw = getEventMiddleware();
+        mw.subscribeCurrent(this.run.id, this);
+        this._wsSubscribeNewSession(this.run.id);
+        const backendAtt = mapAttachments(attachments) ?? undefined;
+        await api.startSession(
+          this.run.id,
+          undefined,
+          undefined,
+          text,
+          backendAtt,
+          this.run.platform_id ?? undefined,
+        );
+        this._startSpawnTimeout(this.run.id);
+        if (!this.isKnownSlashCommand(text)) {
           this._startResponseTimeout(this.run.id);
         }
       } else {
@@ -3184,6 +3210,12 @@ export class SessionStore {
         }
         // Only set lastCompactedAt during live mode — during replay
         // the timestamp would be meaningless (Date.now() ≠ original event time).
+        this.compactEvents.push({
+          turnIndex: isMicro ? this.microcompactCount : this.compactCount,
+          trigger: (ev.trigger as string) ?? (isMicro ? "micro" : "auto"),
+          preTokens: (ev.pre_tokens as number) ?? undefined,
+          ts: eventTs(ev),
+        });
         if (!replayOnly) {
           this.lastCompactedAt = Date.now();
         }

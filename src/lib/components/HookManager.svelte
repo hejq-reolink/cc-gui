@@ -204,7 +204,7 @@
 <!-- Toast -->
 {#if toastMessage}
   <div
-    class="fixed top-4 right-4 z-50 rounded-lg border px-4 py-2 text-sm shadow-lg transition-opacity {toastType ===
+    class="fixed top-4 right-4 z-50 rounded-2xl border px-4 py-2 text-sm shadow-lg transition-opacity {toastType ===
     'success'
       ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
       : 'border-destructive/30 bg-destructive/10 text-destructive'}"
@@ -220,7 +220,7 @@
     onclick={() => (confirmAction = null)}
   >
     <div
-      class="rounded-lg border border-border bg-background p-6 shadow-xl max-w-sm"
+      class="rounded-2xl border border-border bg-background p-6 shadow-xl max-w-sm"
       onclick={(e) => e.stopPropagation()}
     >
       <h3 class="text-sm font-semibold text-foreground mb-2">{confirmAction.title}</h3>

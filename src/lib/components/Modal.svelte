@@ -3,22 +3,36 @@
     open = $bindable(false),
     title = "",
     closeable = true,
+    maxWidth = "max-w-lg",
     children,
   }: {
     open?: boolean;
     title?: string;
     closeable?: boolean;
+    maxWidth?: string;
     children?: import("svelte").Snippet;
   } = $props();
 
   let dialogEl: HTMLDivElement | undefined = $state();
+  let closing = $state(false);
+  let visible = $state(false);
 
-  // Auto-focus dialog container when opened so Escape hits onkeydown here
   $effect(() => {
     if (open) {
-      dialogEl?.focus();
+      visible = true;
+      closing = false;
+      requestAnimationFrame(() => dialogEl?.focus());
+    } else if (visible) {
+      closing = true;
     }
   });
+
+  function handleAnimationEnd() {
+    if (closing) {
+      visible = false;
+      closing = false;
+    }
+  }
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
@@ -37,7 +51,7 @@
   }
 </script>
 
-{#if open}
+{#if visible}
   <div
     class="fixed inset-0 z-50 flex items-center justify-center"
     role="dialog"
@@ -48,13 +62,16 @@
   >
     <!-- Backdrop -->
     <div
-      class="fixed inset-0 bg-black/60 backdrop-blur-sm"
+      class="fixed inset-0 bg-black/40 backdrop-blur-md {closing ? 'animate-backdrop-out' : 'animate-backdrop-in'}"
       onclick={handleBackdropClick}
       role="presentation"
     ></div>
 
     <!-- Content -->
-    <div class="relative z-50 w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg">
+    <div
+      class="relative z-50 w-full {maxWidth} rounded-2xl border bg-background p-6 shadow-apple-lg {closing ? 'animate-slide-down' : 'animate-slide-up'}"
+      onanimationend={handleAnimationEnd}
+    >
       {#if title}
         <h2 class="mb-4 text-lg font-semibold">{title}</h2>
       {/if}

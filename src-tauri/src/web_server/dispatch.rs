@@ -625,12 +625,17 @@ pub async fn dispatch_command(
                 .get("remote_claude_path")
                 .and_then(|v| v.as_str())
                 .map(String::from);
+            let password = params
+                .get("password")
+                .and_then(|v| v.as_str())
+                .map(String::from);
             let result = crate::commands::diagnostics::test_remote_host(
                 host,
                 user,
                 port,
                 key_path,
                 remote_claude_path,
+                password,
             )
             .await?;
             serde_json::to_value(result).map_err(|e| e.to_string())
@@ -671,7 +676,11 @@ pub async fn dispatch_command(
             serde_json::to_value(result).map_err(|e| e.to_string())
         }
         "get_changelog" => {
-            let result = crate::commands::stats::get_changelog().await?;
+            let locale = params
+                .get("locale")
+                .and_then(|v| v.as_str())
+                .map(String::from);
+            let result = crate::commands::stats::get_changelog(locale).await?;
             serde_json::to_value(result).map_err(|e| e.to_string())
         }
 
@@ -1142,6 +1151,7 @@ pub async fn dispatch_command(
         | "update_screenshot_hotkey"
         | "get_clipboard_files"
         | "run_claude_login"
+        | "upgrade_cli"
         | "check_for_updates"
         | "send_chat_message" => Err("desktop only".to_string()),
 

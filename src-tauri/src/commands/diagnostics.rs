@@ -1,5 +1,5 @@
 use crate::agent::claude_stream::augmented_path;
-use crate::agent::ssh::{expand_local_tilde, shell_escape};
+use crate::agent::ssh::expand_local_tilde;
 use crate::models::{
     ApiTestResult, AuthDiagnostics, ClaudeMdInfo, CliCheckResult, CliDiagnostics, CliDistTags,
     ConfigDiagnostics, ConfigIssue, DiagnosticsReport, LocalProxyStatus, ProjectDiagnostics,
@@ -28,7 +28,8 @@ pub async fn check_agent_cli(agent: String) -> Result<CliCheckResult, String> {
 
     // Get version if found
     let version = if found {
-        let ver_output = Command::new(binary)
+        let bin = path.as_deref().unwrap_or(binary);
+        let ver_output = Command::new(bin)
             .arg("--version")
             .env("PATH", &aug_path)
             .hide_console()
@@ -370,6 +371,7 @@ pub async fn test_remote_host(
     port: Option<u16>,
     key_path: Option<String>,
     remote_claude_path: Option<String>,
+    password: Option<String>,
 ) -> Result<RemoteTestResult, String> {
     use tokio::process::Command as TokioCommand;
 
@@ -393,10 +395,13 @@ pub async fn test_remote_host(
     );
 
     // Step 1: SSH connectivity check (15s timeout)
+    let use_password = password.is_some() && key_path.is_none();
+
     let mut ssh_cmd = TokioCommand::new("ssh");
+    if !use_password {
+        ssh_cmd.args(["-o", "BatchMode=yes"]);
+    }
     ssh_cmd.args([
-        "-o",
-        "BatchMode=yes",
         "-o",
         "ConnectTimeout=10",
         "-o",
@@ -408,13 +413,26 @@ pub async fn test_remote_host(
     }
     ssh_cmd.arg(&target).arg("echo ok");
     ssh_cmd
+        .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .hide_console()
         .kill_on_drop(true);
 
-    let ssh_result =
-        tokio::time::timeout(std::time::Duration::from_secs(15), ssh_cmd.output()).await;
+    let ssh_result = tokio::time::timeout(std::time::Duration::from_secs(15), async {
+        let mut child = ssh_cmd.spawn()?;
+        if use_password {
+            if let Some(mut stdin) = child.stdin.take() {
+                use tokio::io::AsyncWriteExt;
+                let _ = stdin
+                    .write_all(format!("{}\n", password.as_deref().unwrap()).as_bytes())
+                    .await;
+                drop(stdin);
+            }
+        }
+        child.wait_with_output().await
+    })
+    .await;
 
     let (ssh_ok, ssh_error) = match ssh_result {
         Ok(Ok(output)) if output.status.success() => (true, None),
@@ -449,34 +467,48 @@ pub async fn test_remote_host(
 
     // Step 2: CLI check (15s timeout)
     let claude_bin = remote_claude_path.as_deref().unwrap_or("claude");
-    let escaped_bin = shell_escape(claude_bin);
-    // `command -v` is POSIX-portable (works on Linux, macOS, and most BSDs).
-    // `which` is not guaranteed on all systems and behaves inconsistently.
-    let check_cmd_str = format!("command -v {} && {} --version", escaped_bin, escaped_bin);
+    // Use `<bin> --version` directly — works on both Windows cmd.exe and POSIX shells.
+    // `command -v` is POSIX-only and fails on Windows SSH (default shell is cmd.exe).
+    // Don't shell_escape either — single quotes break cmd.exe.
+    let check_cmd_str = format!("{} --version", claude_bin);
 
     let mut cli_cmd = TokioCommand::new("ssh");
-    cli_cmd.args(["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]);
+    if !use_password {
+        cli_cmd.args(["-o", "BatchMode=yes"]);
+    }
+    cli_cmd.args(["-o", "ConnectTimeout=10"]);
     cli_cmd.arg("-p").arg(port.to_string());
     if let Some(ref key) = key_path {
         cli_cmd.args(["-i", &expand_local_tilde(key)]);
     }
     cli_cmd.arg(&target).arg(&check_cmd_str);
     cli_cmd
+        .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .hide_console()
         .kill_on_drop(true);
 
-    let cli_result =
-        tokio::time::timeout(std::time::Duration::from_secs(15), cli_cmd.output()).await;
+    let cli_result = tokio::time::timeout(std::time::Duration::from_secs(15), async {
+        let mut child = cli_cmd.spawn()?;
+        if use_password {
+            if let Some(mut stdin) = child.stdin.take() {
+                use tokio::io::AsyncWriteExt;
+                let _ = stdin
+                    .write_all(format!("{}\n", password.as_deref().unwrap()).as_bytes())
+                    .await;
+                drop(stdin);
+            }
+        }
+        child.wait_with_output().await
+    })
+    .await;
 
     let (cli_found, cli_path, cli_version, cli_error) = match cli_result {
         Ok(Ok(output)) if output.status.success() => {
             let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            let lines: Vec<&str> = stdout.lines().collect();
-            let path = lines.first().map(|s| s.to_string());
-            let version = lines.get(1).map(|s| s.to_string());
-            (true, path, version, None)
+            let version = stdout.lines().next().map(|s| s.to_string());
+            (true, None, version, None)
         }
         Ok(Ok(output)) => {
             let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();

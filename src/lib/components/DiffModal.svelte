@@ -65,7 +65,7 @@
       </div>
     {:else if diff.trim()}
       <pre
-        class="max-h-[60vh] overflow-auto rounded-lg bg-muted/50 p-4 text-xs font-mono leading-relaxed">{#each diff.split("\n") as line}{#if line.startsWith("+") && !line.startsWith("+++")}<span
+        class="max-h-[60vh] overflow-auto rounded-2xl bg-muted/50 p-4 text-xs font-mono leading-relaxed">{#each diff.split("\n") as line}{#if line.startsWith("+") && !line.startsWith("+++")}<span
               class="text-green-600 dark:text-green-400">{line}</span
             >
           {:else if line.startsWith("-") && !line.startsWith("---")}<span

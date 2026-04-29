@@ -286,8 +286,11 @@ pub async fn fork_oneshot(
     ];
     claude_args.extend(flag_args.iter().cloned());
 
+    let use_password = remote_host
+        .map(|r| r.password.is_some() && r.key_path.is_none())
+        .unwrap_or(false);
+
     let mut cmd = if let Some(remote) = remote_host {
-        // SSH branch: wrap claude command in ssh
         let remote_cmd = super::ssh::build_remote_claude_command(
             remote,
             cwd,
@@ -298,7 +301,14 @@ pub async fn fork_oneshot(
             models,
             extra_env,
         );
-        let mut ssh_cmd = super::ssh::build_ssh_command(remote, &remote_cmd);
+        let reverse_ports: Vec<u16> = base_url
+            .and_then(|u| super::ssh::extract_localhost_port(u))
+            .into_iter()
+            .collect();
+        let mut ssh_cmd = super::ssh::build_ssh_command(remote, &remote_cmd, &reverse_ports);
+        if use_password {
+            ssh_cmd.stdin(std::process::Stdio::piped());
+        }
         ssh_cmd
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
@@ -310,7 +320,6 @@ pub async fn fork_oneshot(
         );
         ssh_cmd
     } else {
-        // Local branch: existing logic
         let mut local_cmd = Command::new(&claude_bin);
         for arg in &claude_args {
             local_cmd.arg(arg);
@@ -322,9 +331,6 @@ pub async fn fork_oneshot(
             .env_remove("CLAUDECODE")
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped());
-        // Inject auth environment variables (mutually exclusive — remove the other to
-        // prevent inherited shell env vars from interfering).
-        // Use env_remove (not empty string) — CLI may treat empty as "set but invalid".
         if let Some(key) = api_key {
             local_cmd.env("ANTHROPIC_API_KEY", key);
             local_cmd.env_remove("ANTHROPIC_AUTH_TOKEN");
@@ -336,13 +342,11 @@ pub async fn fork_oneshot(
         if let Some(url) = base_url {
             local_cmd.env("ANTHROPIC_BASE_URL", url);
         }
-        // Inject model tier env vars for third-party platforms
         if let Some(m) = models {
             for (k, v) in crate::commands::session::resolve_model_tiers(m) {
                 local_cmd.env(k, v);
             }
         }
-        // Inject extra env vars for third-party platforms
         if let Some(extra) = extra_env {
             for (k, v) in extra {
                 local_cmd.env(k, v);
@@ -356,10 +360,20 @@ pub async fn fork_oneshot(
     };
 
     cmd.hide_console().kill_on_drop(true);
-    let output = tokio::time::timeout(Duration::from_secs(60), cmd.output())
-        .await
-        .map_err(|_| "fork_oneshot timed out after 60s".to_string())?
-        .map_err(|e| format!("fork_oneshot spawn failed: {}", e))?;
+    let output = tokio::time::timeout(Duration::from_secs(60), async {
+        let mut child = cmd.spawn().map_err(|e| format!("fork_oneshot spawn failed: {}", e))?;
+        if use_password {
+            if let (Some(remote), Some(ref mut stdin)) = (remote_host, child.stdin.take()) {
+                use tokio::io::AsyncWriteExt;
+                let pw = format!("{}\n", remote.password.as_deref().unwrap_or(""));
+                let _ = stdin.write_all(pw.as_bytes()).await;
+            }
+        }
+        child.wait_with_output().await.map_err(|e| format!("fork_oneshot wait failed: {}", e))
+    })
+    .await
+    .map_err(|_| "fork_oneshot timed out after 60s".to_string())?
+    .map_err(|e: String| e)?;
 
     let stdout_str = String::from_utf8_lossy(&output.stdout);
     let stderr_str = String::from_utf8_lossy(&output.stderr);

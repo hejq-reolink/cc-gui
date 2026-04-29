@@ -189,7 +189,7 @@
     <h3 class="text-sm font-semibold text-foreground">
       {mode === "create" ? t("agent_createAgent") : t("agent_editAgent")}
     </h3>
-    <div class="flex gap-1 rounded-md bg-muted p-0.5">
+    <div class="flex gap-1 rounded-lg bg-muted p-0.5">
       <button
         class="px-2 py-0.5 text-[11px] rounded transition-colors
           {editorMode === 'form'
@@ -226,7 +226,7 @@
 
   <!-- Errors -->
   {#if errors.length > 0}
-    <div class="rounded-md border border-destructive/30 bg-destructive/10 p-3 space-y-1">
+    <div class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 space-y-1">
       {#each errors as error}
         <p class="text-xs text-destructive">{error}</p>
       {/each}
@@ -250,7 +250,7 @@
         >
         <input
           type="text"
-          class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+          class="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
             focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
           placeholder="code-reviewer"
           bind:value={formData.name}
@@ -265,7 +265,7 @@
           >{t("agent_description")} *</label
         >
         <textarea
-          class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+          class="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
             focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
           rows="2"
           placeholder="Expert code reviewer for quality..."
@@ -280,7 +280,7 @@
           <label class="text-[11px] font-medium text-foreground block mb-1">Scope</label>
           <div class="flex gap-2">
             <button
-              class="px-3 py-1 text-xs rounded-md border transition-colors
+              class="px-3 py-1 text-xs rounded-lg border transition-colors
                 {scope === 'user'
                 ? 'border-primary bg-primary/10 text-foreground'
                 : 'border-border text-muted-foreground hover:text-foreground'}"
@@ -289,7 +289,7 @@
               {t("agent_scopeUser")}
             </button>
             <button
-              class="px-3 py-1 text-xs rounded-md border transition-colors
+              class="px-3 py-1 text-xs rounded-lg border transition-colors
                 {scope === 'project'
                 ? 'border-primary bg-primary/10 text-foreground'
                 : 'border-border text-muted-foreground hover:text-foreground'}"
@@ -305,7 +305,7 @@
       <div>
         <label class="text-[11px] font-medium text-foreground block mb-1">{t("agent_model")}</label>
         <select
-          class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+          class="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
             focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
           bind:value={formData.model}
           disabled={mode === "edit"}
@@ -342,7 +342,7 @@
         {#if mode === "create"}
           <div class="flex gap-1">
             <select
-              class="flex-1 rounded-md border border-border bg-background px-2 py-1 text-xs"
+              class="flex-1 rounded-lg border border-border bg-background px-2 py-1 text-xs"
               bind:value={toolInput}
             >
               <option value="">Add tool...</option>
@@ -351,7 +351,7 @@
               {/each}
             </select>
             <button
-              class="rounded-md bg-muted px-2 py-1 text-xs text-foreground hover:bg-muted/80"
+              class="rounded-lg bg-muted px-2 py-1 text-xs text-foreground hover:bg-muted/80"
               onclick={addTool}
               disabled={!toolInput}>+</button
             >
@@ -365,7 +365,7 @@
           >{t("agent_permissionMode")}</label
         >
         <select
-          class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+          class="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
             focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
           bind:value={formData.permissionMode}
           disabled={mode === "edit"}
@@ -385,7 +385,7 @@
         >
         <input
           type="number"
-          class="w-24 rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+          class="w-24 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
             focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
           placeholder="10"
           value={formData.maxTurns ?? ""}
@@ -403,7 +403,7 @@
         >
         <input
           type="text"
-          class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+          class="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
             focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
           placeholder="MEMORY.md"
           bind:value={formData.memory}
@@ -438,7 +438,7 @@
         >
         <input
           type="text"
-          class="w-full rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground
+          class="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-foreground
             focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
           placeholder="Auto-submit prompt on first turn..."
           bind:value={formData.initialPrompt}
@@ -452,7 +452,7 @@
           >{t("agent_systemPrompt")}</label
         >
         <textarea
-          class="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground font-mono
+          class="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground font-mono
             focus:outline-none focus:ring-1 focus:ring-primary resize-y disabled:opacity-50"
           rows="8"
           placeholder="You are a specialized agent..."
@@ -469,7 +469,7 @@
           <label class="text-[11px] font-medium text-foreground block mb-1">Scope</label>
           <div class="flex gap-2">
             <button
-              class="px-3 py-1 text-xs rounded-md border transition-colors
+              class="px-3 py-1 text-xs rounded-lg border transition-colors
                 {scope === 'user'
                 ? 'border-primary bg-primary/10 text-foreground'
                 : 'border-border text-muted-foreground hover:text-foreground'}"
@@ -478,7 +478,7 @@
               {t("agent_scopeUser")}
             </button>
             <button
-              class="px-3 py-1 text-xs rounded-md border transition-colors
+              class="px-3 py-1 text-xs rounded-lg border transition-colors
                 {scope === 'project'
                 ? 'border-primary bg-primary/10 text-foreground'
                 : 'border-border text-muted-foreground hover:text-foreground'}"
@@ -494,7 +494,7 @@
         </p>
       {/if}
       <textarea
-        class="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground font-mono
+        class="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground font-mono
           focus:outline-none focus:ring-1 focus:ring-primary resize-y"
         rows="20"
         bind:value={sourceContent}
@@ -506,13 +506,13 @@
   <!-- Footer -->
   <div class="flex justify-end gap-2 pt-2 border-t border-border">
     <button
-      class="rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+      class="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
       onclick={onCancel}
     >
       Cancel
     </button>
     <button
-      class="rounded-md bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+      class="rounded-lg bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       onclick={handleSave}
       disabled={saving}
     >

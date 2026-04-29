@@ -247,7 +247,7 @@
     {#each candidates as c, i (c.cliUuid)}
       <button
         type="button"
-        class="w-full rounded-md border px-3 py-2 text-left transition-colors
+        class="w-full rounded-lg border px-3 py-2 text-left transition-colors
           {selected?.cliUuid === c.cliUuid
           ? 'border-primary bg-primary/5'
           : 'border-transparent hover:border-border hover:bg-muted/50'}"
@@ -309,7 +309,7 @@
       {@render candidateList()}
 
       {#if executeError}
-        <div class="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div class="mb-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {executeError}
         </div>
       {/if}
@@ -331,7 +331,7 @@
               : t("rewind_selectAll")}
           </button>
         </div>
-        <div class="mb-4 max-h-[30vh] overflow-y-auto rounded-md border bg-muted/30 p-2">
+        <div class="mb-4 max-h-[30vh] overflow-y-auto rounded-lg border bg-muted/30 p-2">
           {#each dryRunResult.filesChanged as file}
             <label
               class="flex items-center gap-2 rounded px-1 py-0.5 hover:bg-muted/50 cursor-pointer"
@@ -367,14 +367,14 @@
         <div class="flex gap-2">
           <button
             type="button"
-            class="rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+            class="rounded-lg border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
             onclick={goBack}
           >
             {t("rewind_back")}
           </button>
           <button
             type="button"
-            class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90
+            class="rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90
               disabled:opacity-50 disabled:cursor-not-allowed"
             onclick={executeRewind}
             disabled={hasFiles && selectedFiles.size === 0}
@@ -388,7 +388,7 @@
       {@render candidateList()}
 
       {#if executeError}
-        <div class="mb-3 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div class="mb-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {executeError}
         </div>
       {/if}
@@ -398,14 +398,14 @@
       <div class="flex justify-end gap-2">
         <button
           type="button"
-          class="rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+          class="rounded-lg border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
           onclick={goBack}
         >
           {t("rewind_back")}
         </button>
         <button
           type="button"
-          class="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90"
+          class="rounded-lg bg-primary px-3 py-1.5 text-sm text-primary-foreground transition-colors hover:bg-primary/90"
           onclick={executeRewind}
         >
           {t("rewind_confirm")}
@@ -415,14 +415,14 @@
       <!-- dryRun failed (hard error or canRewind: false) -->
       {@render candidateList()}
 
-      <div class="my-4 rounded-md bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+      <div class="my-4 rounded-lg bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
         {dryRunResult?.error ?? t("rewind_checkpointUnavailable")}
       </div>
 
       <div class="flex justify-end">
         <button
           type="button"
-          class="rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+          class="rounded-lg border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
           onclick={goBack}
         >
           {t("rewind_back")}

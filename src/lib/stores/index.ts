@@ -1,4 +1,6 @@
 export { SessionStore } from "./session-store.svelte";
+export { TabManager } from "./tab-manager.svelte";
+export type { SessionTab } from "./tab-manager.svelte";
 export { TeamStore } from "./team-store.svelte";
 export { KeybindingStore } from "./keybindings.svelte";
 export { getEventMiddleware, EventMiddleware } from "./event-middleware";
