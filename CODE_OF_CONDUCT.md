@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in the OpenCovibe community a welcoming and respectful experience for everyone.
+We as members, contributors, and leaders pledge to make participation in the CC GUI community a welcoming and respectful experience for everyone.
 
 ## Our Standards
 

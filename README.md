@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="static/logo-text.png" width="360" alt="OpenCovibe">
+  <strong>CC GUI</strong>
 </p>
 
 <p align="center">
@@ -21,13 +21,9 @@
 
 ---
 
-<p align="center">
-  <img src="static/screenshot.png" width="800" alt="OpenCovibe Screenshot">
-</p>
+## Why CC GUI?
 
-## Why OpenCovibe?
-
-AI coding CLIs like Claude Code are powerful, but they run inside a terminal. That means no persistent dashboard, no visual diff review, no cross-session history, and no multi-provider switching. OpenCovibe wraps these CLIs with a native desktop UI that adds the layers the terminal can't provide — while keeping all your data **stored locally**. (Remote model APIs require network access; the app itself has no cloud backend.)
+AI coding CLIs like Claude Code are powerful, but they run inside a terminal. That means no persistent dashboard, no visual diff review, no cross-session history, and no multi-provider switching. CC GUI wraps these CLIs with a native desktop UI that adds the layers the terminal can't provide — while keeping all your data **stored locally**. (Remote model APIs require network access; the app itself has no cloud backend.)
 
 | Agent | Status |
 |-------|--------|
@@ -42,7 +38,7 @@ AI coding CLIs like Claude Code are powerful, but they run inside a terminal. Th
 
 ### What the CLI doesn't give you
 
-| Capability | What OpenCovibe adds |
+| Capability | What CC GUI adds |
 |------------|---------------------|
 | **Visual Tool Cards** | Every tool call (Read, Edit, Bash, Grep, Write, WebFetch, …) rendered as an inline card with syntax-highlighted diffs, structured output, and one-click copy |
 | **Run History & Replay** | Browse all past sessions, full event replay, resume / fork from any point, soft-delete with recovery |
@@ -58,7 +54,7 @@ AI coding CLIs like Claude Code are powerful, but they run inside a terminal. Th
 | **Plugin Marketplace** | Browse, install, and manage Claude Code plugins and skills from a visual marketplace |
 | **MCP Management** | Discover MCP servers, view per-server status, reconnect / toggle from a panel |
 | **Inline Permissions** | Rich permission review UI with batch Allow/Deny panel, CLI-suggested "Always Allow" rules, and AskUserQuestion rendering |
-| **CLI Session Import** | Discover and import existing Claude Code CLI sessions into OpenCovibe |
+| **CLI Session Import** | Discover and import existing Claude Code CLI sessions into CC GUI |
 | **Rewind** | Checkpoint and selectively revert file changes with dry-run preview |
 | **Remote Hosts** | Configure SSH hosts for remote CLI execution with key generation wizard and connectivity testing |
 | **Preview & Element Picker** | Open a localhost preview in a companion window, interactively pick page elements, and insert structured context (DOM path, styles, HTML snippet) into the chat |
@@ -84,15 +80,15 @@ AI coding CLIs like Claude Code are powerful, but they run inside a terminal. Th
 
 ### Option A: Download Pre-built Binary (macOS)
 
-Download the latest `.dmg` from [Releases](https://github.com/AnyiWang/OpenCovibe/releases) — universal binary, supports both Apple Silicon and Intel Macs.
+Download the latest `.dmg` from [Releases](https://github.com/hejq-reolink/cc-gui/releases) — universal binary, supports both Apple Silicon and Intel Macs.
 
 > **Note**: The app is not code-signed. On first launch, right-click and select "Open" to bypass macOS Gatekeeper.
 
 ### Option B: Automated Setup (macOS)
 
 ```bash
-git clone https://github.com/AnyiWang/OpenCovibe.git
-cd OpenCovibe
+git clone https://github.com/hejq-reolink/cc-gui.git
+cd CC GUI
 ./scripts/setup.sh          # add --yes to skip confirmation prompts
 npm run tauri dev
 ```
@@ -129,15 +125,15 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 **Build & Run:**
 
 ```bash
-git clone https://github.com/AnyiWang/OpenCovibe.git
-cd OpenCovibe
+git clone https://github.com/hejq-reolink/cc-gui.git
+cd CC GUI
 npm install
 npm run tauri dev
 ```
 
 ### Setup Wizard
 
-On first launch, OpenCovibe guides you through:
+On first launch, CC GUI guides you through:
 
 1. **CLI Detection** — Auto-detects Claude Code CLI, offers installation if missing
 2. **Authentication** — OAuth login or API key for 15+ providers
@@ -232,12 +228,8 @@ npm run format           # Format
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding conventions, and PR guidelines.
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=AnyiWang/OpenCovibe&type=Date)](https://star-history.com/#AnyiWang/OpenCovibe&Date)
-
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).
 
-Copyright 2025-2026 OpenCovibe Contributors.
+Copyright 2025-2026 CC GUI Contributors.
