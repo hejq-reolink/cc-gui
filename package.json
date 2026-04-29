@@ -4,13 +4,13 @@
   "description": "Local-first desktop app for AI-assisted vibe coding",
   "type": "module",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/AnyiWang/OpenCovibe",
+  "homepage": "https://github.com/hejq-reolink/cc-gui",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AnyiWang/OpenCovibe.git"
+    "url": "https://github.com/hejq-reolink/cc-gui.git"
   },
   "bugs": {
-    "url": "https://github.com/AnyiWang/OpenCovibe/issues"
+    "url": "https://github.com/hejq-reolink/cc-gui/issues"
   },
   "engines": {
     "node": ">=20"

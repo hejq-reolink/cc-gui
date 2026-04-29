@@ -1409,7 +1409,7 @@
             <button
               class="text-xs text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer"
               onclick={() => (showAbout = true)}
-              title="About OpenCovibe">v0.1</button
+              title="About CC GUI">v0.1</button
             >
           </div>
           <button

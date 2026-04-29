@@ -289,7 +289,7 @@ export const commands: CommandDef[] = [
     id: "version",
     name: "Version Info",
     nameKey: "cmd_versionInfoName",
-    description: "Show OpenCovibe Desktop version information",
+    description: "Show CC GUI Desktop version information",
     descriptionKey: "cmd_versionInfoDesc",
     category: "diagnostics",
     agent: "both",

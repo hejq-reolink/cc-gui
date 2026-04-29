@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicegui/nicegui/main/.github/schemas/tauri-v2.json",
-  "productName": "OpenCovibe",
+  "productName": "CC GUI",
   "version": "0.1.54",
   "identifier": "com.opencovibe.desktop",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "OpenCovibe",
+        "title": "CC GUI",
         "width": 1440,
         "height": 900,
         "minWidth": 1024,
